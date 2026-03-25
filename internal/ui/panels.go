@@ -173,7 +173,7 @@ func (m Model) renderConversationPanel() string {
 	if m.loading {
 		body = "\n\n" + emptyStyle.Width(w-6).Render(m.spinner.View()+" Loading session...")
 	} else {
-		body = m.viewport.View()
+		body = m.applyLineHighlight(m.viewport.View(), w-6)
 	}
 
 	// Add scroll indicator
@@ -340,6 +340,28 @@ func (m Model) renderHeader() string {
 	fill := headerLineStyle.Render(" " + strings.Repeat("─", fillLen) + " ")
 
 	return logo + fill + breadcrumb
+}
+
+// applyLineHighlight adds a background highlight to the center line of the
+// viewport output. This runs on the already-rendered string so it costs
+// nothing — no re-rendering needed.
+func (m Model) applyLineHighlight(viewOutput string, maxWidth int) string {
+	if m.focus != panelConversation || viewOutput == "" {
+		return viewOutput
+	}
+
+	lines := strings.Split(viewOutput, "\n")
+	if len(lines) == 0 {
+		return viewOutput
+	}
+
+	// Highlight the center line
+	center := len(lines) / 2
+	lines[center] = selectedItemStyle.Width(maxWidth).Render(
+		strings.TrimRight(lines[center], " "),
+	)
+
+	return strings.Join(lines, "\n")
 }
 
 // filterSessions applies the current session filter.

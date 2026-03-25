@@ -44,12 +44,7 @@ type Model struct {
 
 	// Collapsible sections: key -> collapsed (true = collapsed)
 	collapsed        map[string]bool
-	highlightKey     string         // collapsible key currently targeted (for visual indicator)
 	collapsibleLines map[string]int // key → line number (populated during render)
-
-	// Render cache: avoids re-running glamour on every scroll
-	renderCache map[string]string // message UUID → rendered string (for non-collapsible content)
-	lastWidth   int               // invalidate cache when width changes
 
 	// Help overlay
 	showHelp bool
@@ -120,7 +115,6 @@ func NewModel() Model {
 		spinner:         s,
 		scrollPositions: make(map[string]int),
 		marks:             make(map[rune]markPosition),
-		renderCache:       make(map[string]string),
 		pendingMarkOffset: -1,
 	}
 }
@@ -145,21 +139,10 @@ func (m *Model) rebuildRenderer() {
 
 // updateConversationContent re-renders the conversation and updates the viewport and line tracking.
 func (m *Model) updateConversationContent() {
-	// Render with current highlight key
 	result := m.renderConversation()
+	m.viewport.SetContent(result.content)
 	m.userMessageLines = result.userLines
 	m.collapsibleLines = result.collapsibleLines
-	m.viewport.SetContent(result.content)
-
-	// Check if highlight needs updating based on new positions
-	newKey := m.nearestCollapsibleKey()
-	if newKey != m.highlightKey {
-		m.highlightKey = newKey
-		result = m.renderConversation()
-		m.userMessageLines = result.userLines
-		m.collapsibleLines = result.collapsibleLines
-		m.viewport.SetContent(result.content)
-	}
 }
 
 func (m Model) Init() tea.Cmd {
@@ -214,7 +197,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.messages = msg.messages
 		m.loading = false
 		m.collapsed = make(map[string]bool)
-		m.renderCache = make(map[string]string)
 		m.updateConversationContent()
 		// Pending mark jump takes priority
 		if m.pendingMarkOffset >= 0 {
@@ -266,7 +248,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.focus == panelConversation {
 		var cmd tea.Cmd
 		m.viewport, cmd = m.viewport.Update(msg)
-		m.refreshHighlight()
 		return m, cmd
 	}
 

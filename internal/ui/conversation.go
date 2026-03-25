@@ -91,12 +91,6 @@ func (m Model) renderConversation() renderResult {
 }
 
 func (m Model) renderUserMessage(msg data.Message, w int) string {
-	// Check cache first
-	cacheKey := "user:" + msg.UUID
-	if cached, ok := m.renderCache[cacheKey]; ok && m.lastWidth == w {
-		return cached
-	}
-
 	ts := timestampStyle.Render(msg.Timestamp.Format("15:04:05"))
 	avatar := avatarUserStyle.Render("●")
 	label := " " + avatar + " " + userLabelStyle.Render("You") + " " + ts
@@ -113,10 +107,7 @@ func (m Model) renderUserMessage(msg data.Message, w int) string {
 	}
 
 	body := userBubbleStyle.Width(w).Render(mdRendered)
-	result := label + "\n" + body
-	m.renderCache[cacheKey] = result
-	m.lastWidth = w
-	return result
+	return label + "\n" + body
 }
 
 func (m Model) renderAssistantMessage(msg data.Message, w int) string {
@@ -128,25 +119,17 @@ func (m Model) renderAssistantMessage(msg data.Message, w int) string {
 	sections = append(sections, label)
 
 	// Render each content block in order
-	for i, block := range msg.ContentBlocks {
+	for _, block := range msg.ContentBlocks {
 		switch block.Type {
 		case "text":
 			if block.Text == "" {
 				continue
 			}
-			// Cache glamour-rendered text blocks
-			cacheKey := fmt.Sprintf("ast:%s:%d", msg.UUID, i)
-			rendered, ok := m.renderCache[cacheKey]
-			if !ok || m.lastWidth != w {
-				mdRendered, err := m.renderer.Render(block.Text)
-				if err != nil || strings.TrimSpace(mdRendered) == "" {
-					mdRendered = block.Text
-				}
-				rendered = assistantBubbleStyle.Width(w).Render(mdRendered)
-				m.renderCache[cacheKey] = rendered
-				m.lastWidth = w
+			mdRendered, err := m.renderer.Render(block.Text)
+			if err != nil || strings.TrimSpace(mdRendered) == "" {
+				mdRendered = block.Text
 			}
-			sections = append(sections, rendered)
+			sections = append(sections, assistantBubbleStyle.Width(w).Render(mdRendered))
 
 		case "thinking":
 			sections = append(sections, m.renderThinkingBlock(block, msg.UUID, w))
@@ -167,27 +150,12 @@ func (m Model) renderAssistantMessage(msg data.Message, w int) string {
 func (m Model) renderThinkingBlock(block data.ContentBlock, msgUUID string, w int) string {
 	key := "thinking:" + msgUUID
 	collapsed := m.isCollapsed(key)
-	highlighted := key == m.highlightKey
-
-	gutter := thinkingGutterStyle
-	if highlighted {
-		gutter = toolGutterExpandedStyle
-	}
 
 	if collapsed {
-		headerText := "▸ Thinking..."
-		if highlighted {
-			return gutter.Render(selectedItemStyle.Render(headerText))
-		}
-		return gutter.Render(thinkingHeaderStyle.Render(headerText))
+		return thinkingGutterStyle.Render(thinkingHeaderStyle.Render("▸ Thinking..."))
 	}
 
-	var header string
-	if highlighted {
-		header = selectedItemStyle.Render("▾ Thinking")
-	} else {
-		header = thinkingHeaderStyle.Render("▾ Thinking")
-	}
+	header := thinkingHeaderStyle.Render("▾ Thinking")
 	text := block.Thinking
 	if text == "" {
 		text = "(redacted)"
@@ -196,13 +164,12 @@ func (m Model) renderThinkingBlock(block data.ContentBlock, msgUUID string, w in
 		text = text[:maxThinkingLen] + "\n... (truncated)"
 	}
 	body := thinkingBodyStyle.Width(w - 6).Render(text)
-	return gutter.Render(header + "\n" + body)
+	return thinkingGutterStyle.Render(header + "\n" + body)
 }
 
 func (m Model) renderToolCall(block data.ContentBlock, msg data.Message, w int) string {
 	key := "tool:" + block.ToolID
 	collapsed := m.isCollapsed(key)
-	highlighted := key == m.highlightKey
 
 	// Build header with tool name and a brief summary
 	summary := toolCallSummary(block)
@@ -211,22 +178,11 @@ func (m Model) renderToolCall(block data.ContentBlock, msg data.Message, w int) 
 		arrow = "▾"
 	}
 
-	headerContent := fmt.Sprintf("%s %s", arrow, toolBadgeStyle.Render(block.ToolName)) +
-		" " + summary
-
-	var header string
-	if highlighted {
-		header = selectedItemStyle.Render(headerContent)
-	} else {
-		header = toolHeaderStyle.Render(headerContent)
-	}
+	header := toolHeaderStyle.Render(fmt.Sprintf("%s %s", arrow, toolBadgeStyle.Render(block.ToolName))) +
+		" " + toolHeaderStyle.Render(summary)
 
 	if collapsed {
-		gutter := toolGutterCollapsedStyle
-		if highlighted {
-			gutter = toolGutterExpandedStyle
-		}
-		return gutter.Render(header)
+		return toolGutterCollapsedStyle.Render(header)
 	}
 
 	var bodyParts []string

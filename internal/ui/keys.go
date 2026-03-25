@@ -46,7 +46,6 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.focus == panelConversation {
 		var cmd tea.Cmd
 		m.viewport, cmd = m.viewport.Update(msg)
-		m.refreshHighlight()
 		return m, cmd
 	}
 
@@ -118,7 +117,6 @@ func (m Model) handleActionKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 		if m.focus == panelConversation {
 			offset := m.viewport.YOffset
 			m.toggleCollapsibleAtCursor()
-			m.renderCache = make(map[string]string) // clear cache on toggle
 			m.updateConversationContent()
 			m.viewport.SetYOffset(offset)
 			return m, nil, true
@@ -134,7 +132,6 @@ func (m Model) handleActionKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 		if m.focus == panelConversation {
 			offset := m.viewport.YOffset
 			m.expandAll()
-			m.renderCache = make(map[string]string)
 			m.updateConversationContent()
 			m.viewport.SetYOffset(offset)
 			return m, nil, true
@@ -144,7 +141,6 @@ func (m Model) handleActionKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 		if m.focus == panelConversation {
 			offset := m.viewport.YOffset
 			m.collapseAll()
-			m.renderCache = make(map[string]string)
 			m.updateConversationContent()
 			m.viewport.SetYOffset(offset)
 			return m, nil, true
@@ -173,7 +169,6 @@ func (m Model) handleNavKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 		case panelConversation:
 			var cmd tea.Cmd
 			m.viewport, cmd = m.viewport.Update(msg)
-			m.refreshHighlight()
 			return m, cmd, true
 		}
 
@@ -193,7 +188,6 @@ func (m Model) handleNavKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 		case panelConversation:
 			var cmd tea.Cmd
 			m.viewport, cmd = m.viewport.Update(msg)
-			m.refreshHighlight()
 			return m, cmd, true
 		}
 
@@ -212,7 +206,6 @@ func (m Model) handleNavKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 			}
 		case panelConversation:
 			m.viewport.GotoTop()
-			m.refreshHighlight()
 		}
 		return m, nil, true
 
@@ -233,7 +226,6 @@ func (m Model) handleNavKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 			}
 		case panelConversation:
 			m.viewport.GotoBottom()
-			m.refreshHighlight()
 		}
 		return m, nil, true
 
@@ -249,7 +241,6 @@ func (m Model) handleNavKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 		case panelConversation:
 			var cmd tea.Cmd
 			m.viewport, cmd = m.viewport.Update(msg)
-			m.refreshHighlight()
 			return m, cmd, true
 		}
 
@@ -265,7 +256,6 @@ func (m Model) handleNavKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 		case panelConversation:
 			var cmd tea.Cmd
 			m.viewport, cmd = m.viewport.Update(msg)
-			m.refreshHighlight()
 			return m, cmd, true
 		}
 	}
@@ -385,22 +375,6 @@ func (m *Model) toggleCollapsibleAtCursor() {
 	if key != "" {
 		m.collapsed[key] = !m.isCollapsed(key)
 	}
-}
-
-// refreshHighlight updates the highlighted collapsible section based on scroll position.
-// Only re-renders if the targeted section actually changed to avoid lag.
-func (m *Model) refreshHighlight() {
-	newKey := m.nearestCollapsibleKey()
-	if newKey == m.highlightKey {
-		return // no change, skip expensive re-render
-	}
-	offset := m.viewport.YOffset
-	m.highlightKey = newKey
-	result := m.renderConversation()
-	m.viewport.SetContent(result.content)
-	m.userMessageLines = result.userLines
-	m.collapsibleLines = result.collapsibleLines
-	m.viewport.SetYOffset(offset)
 }
 
 // nearestCollapsibleKey returns the key of the collapsible section closest to the
