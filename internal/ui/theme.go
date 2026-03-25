@@ -176,11 +176,9 @@ func rebuildStyles() {
 	// --- Conversation ---
 	userBubbleStyle = lipgloss.NewStyle().
 		Foreground(colorFg).
-		Border(lipgloss.RoundedBorder()).
+		Border(lipgloss.NormalBorder(), false, false, false, true).
 		BorderForeground(colorSecondary).
-		Padding(0, 1).
-		MarginTop(1).
-		MarginBottom(1)
+		PaddingLeft(1)
 
 	userLabelStyle = lipgloss.NewStyle().
 		Foreground(colorSecondary).
