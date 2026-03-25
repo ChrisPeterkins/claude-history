@@ -5,7 +5,6 @@ import (
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/glamour"
 )
 
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -24,18 +23,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.themeIndex = (m.themeIndex + 1) % len(themes)
 		applyTheme(themes[m.themeIndex])
 		m.statusMessage = "Theme: " + themes[m.themeIndex].Name
-		// Re-create glamour renderer for new theme
-		if themes[m.themeIndex].Name == "Light" {
-			m.renderer, _ = glamour.NewTermRenderer(
-				glamour.WithStylePath("light"),
-				glamour.WithWordWrap(80),
-			)
-		} else {
-			m.renderer, _ = glamour.NewTermRenderer(
-				glamour.WithStylePath("dark"),
-				glamour.WithWordWrap(80),
-			)
-		}
+		m.rebuildRenderer()
 		if len(m.messages) > 0 {
 			m.viewport.SetContent(m.renderConversation())
 		}
@@ -46,7 +34,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.fullScreen {
 			m.focus = panelConversation
 		}
-		// Resize viewport for new layout
+		// Rebuild renderer for new width, resize viewport
+		m.rebuildRenderer()
 		m.viewport.Width = m.conversationWidth() - 4
 		m.viewport.Height = m.contentHeight() - 3
 		if len(m.messages) > 0 {

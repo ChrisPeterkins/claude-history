@@ -206,16 +206,29 @@ func (m Model) isCollapsed(key string) bool {
 }
 
 func (m Model) renderHelp() string {
-	pairs := []struct{ key, desc string }{
+	allPairs := []struct{ key, desc string }{
 		{"tab", "panel"},
 		{"↑/↓", "navigate"},
 		{"f", "fullscreen"},
 		{"/", "search"},
 		{"space", "expand"},
-		{"n/N", "jump msg"},
+		{"n/N", "jump"},
 		{"y", "copy"},
 		{"t", "theme"},
 		{"q", "quit"},
+	}
+
+	// Show fewer keybindings on narrow terminals
+	pairs := allPairs
+	if m.width < 100 {
+		pairs = []struct{ key, desc string }{
+			{"f", "full"}, {"/", "search"}, {"t", "theme"}, {"q", "quit"},
+		}
+	} else if m.width < 140 {
+		pairs = []struct{ key, desc string }{
+			{"tab", "panel"}, {"f", "full"}, {"/", "search"},
+			{"space", "expand"}, {"y", "copy"}, {"t", "theme"}, {"q", "quit"},
+		}
 	}
 
 	var items []string
@@ -229,7 +242,7 @@ func (m Model) renderHelp() string {
 	breadcrumb := m.renderBreadcrumb()
 
 	left := logo
-	if breadcrumb != "" {
+	if breadcrumb != "" && m.width >= 80 {
 		left += statusBarStyle.Render("  │  ") + breadcrumb
 	}
 

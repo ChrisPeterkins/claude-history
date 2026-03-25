@@ -87,6 +87,24 @@ func NewModel() Model {
 	}
 }
 
+// rebuildRenderer creates a new glamour renderer sized to the current conversation width.
+func (m *Model) rebuildRenderer() {
+	wrapWidth := m.conversationWidth() - 12
+	if wrapWidth < 40 {
+		wrapWidth = 40
+	}
+
+	style := "dark"
+	if m.themeIndex < len(themes) && themes[m.themeIndex].Name == "Light" {
+		style = "light"
+	}
+
+	m.renderer, _ = glamour.NewTermRenderer(
+		glamour.WithStylePath(style),
+		glamour.WithWordWrap(wrapWidth),
+	)
+}
+
 func (m Model) Init() tea.Cmd {
 	return loadProjects
 }
@@ -104,6 +122,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		m.ready = true
+		m.rebuildRenderer()
 		m.viewport = viewport.New(m.conversationWidth(), m.contentHeight())
 		m.viewport.Style = lipgloss.NewStyle()
 		if len(m.messages) > 0 {
@@ -173,12 +192,16 @@ func (m Model) View() string {
 	}
 
 	var main string
-	if m.fullScreen {
-		// Full-screen: only conversation panel
+	if m.fullScreen || m.width < 60 {
+		// Full-screen or very narrow: only conversation panel
+		main = m.renderConversationPanel()
+	} else if m.width < 100 {
+		// Medium width: hide projects, show sessions + conversation
+		sessionsPanel := m.renderSessionsPanel()
 		convoPanel := m.renderConversationPanel()
-		main = convoPanel
+		main = lipgloss.JoinHorizontal(lipgloss.Top, sessionsPanel, convoPanel)
 	} else {
-		// Normal: three-panel layout
+		// Wide: full three-panel layout
 		projectsPanel := m.renderProjectsPanel()
 		sessionsPanel := m.renderSessionsPanel()
 		convoPanel := m.renderConversationPanel()

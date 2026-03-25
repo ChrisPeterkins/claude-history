@@ -166,19 +166,44 @@ func (m Model) renderConversationPanel() string {
 // --- Layout math ---
 
 func (m Model) projectsWidth() int {
+	if m.fullScreen {
+		return 0
+	}
+	// At small widths, give projects less space
+	if m.width < 100 {
+		return max(16, m.width/6)
+	}
 	return max(20, m.width/5)
 }
 
 func (m Model) sessionsWidth() int {
+	if m.fullScreen || m.width < 60 {
+		return 0
+	}
+	// Medium width: projects hidden, sessions gets more space
+	if m.width < 100 {
+		return max(24, m.width/3)
+	}
 	return max(30, m.width*3/10)
 }
 
 func (m Model) conversationWidth() int {
-	return m.width - m.projectsWidth() - m.sessionsWidth()
+	if m.fullScreen || m.width < 60 {
+		return m.width
+	}
+	w := m.width - m.projectsWidth() - m.sessionsWidth()
+	if w < 30 {
+		return 30
+	}
+	return w
 }
 
 func (m Model) contentHeight() int {
-	return m.height - 2
+	h := m.height - 2
+	if h < 5 {
+		return 5
+	}
+	return h
 }
 
 func (m Model) visibleRange(cursor, total, height int) (int, int) {
