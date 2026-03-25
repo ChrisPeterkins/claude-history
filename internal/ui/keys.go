@@ -46,6 +46,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.focus == panelConversation {
 		var cmd tea.Cmd
 		m.viewport, cmd = m.viewport.Update(msg)
+		m.refreshHighlight()
 		return m, cmd
 	}
 
@@ -169,6 +170,7 @@ func (m Model) handleNavKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 		case panelConversation:
 			var cmd tea.Cmd
 			m.viewport, cmd = m.viewport.Update(msg)
+			m.refreshHighlight()
 			return m, cmd, true
 		}
 
@@ -188,6 +190,7 @@ func (m Model) handleNavKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 		case panelConversation:
 			var cmd tea.Cmd
 			m.viewport, cmd = m.viewport.Update(msg)
+			m.refreshHighlight()
 			return m, cmd, true
 		}
 
@@ -206,6 +209,7 @@ func (m Model) handleNavKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 			}
 		case panelConversation:
 			m.viewport.GotoTop()
+			m.refreshHighlight()
 		}
 		return m, nil, true
 
@@ -226,6 +230,7 @@ func (m Model) handleNavKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 			}
 		case panelConversation:
 			m.viewport.GotoBottom()
+			m.refreshHighlight()
 		}
 		return m, nil, true
 
@@ -241,6 +246,7 @@ func (m Model) handleNavKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 		case panelConversation:
 			var cmd tea.Cmd
 			m.viewport, cmd = m.viewport.Update(msg)
+			m.refreshHighlight()
 			return m, cmd, true
 		}
 
@@ -256,6 +262,7 @@ func (m Model) handleNavKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 		case panelConversation:
 			var cmd tea.Cmd
 			m.viewport, cmd = m.viewport.Update(msg)
+			m.refreshHighlight()
 			return m, cmd, true
 		}
 	}
@@ -375,6 +382,14 @@ func (m *Model) toggleCollapsibleAtCursor() {
 	if key != "" {
 		m.collapsed[key] = !m.isCollapsed(key)
 	}
+}
+
+// refreshHighlight re-renders the conversation with the current scroll position's
+// nearest collapsible section highlighted, preserving the scroll position.
+func (m *Model) refreshHighlight() {
+	offset := m.viewport.YOffset
+	m.updateConversationContent()
+	m.viewport.SetYOffset(offset)
 }
 
 // nearestCollapsibleKey returns the key of the collapsible section closest to the
