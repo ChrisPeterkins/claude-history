@@ -59,17 +59,11 @@ func (m Model) renderConversation() renderResult {
 				rendered = m.renderUserMessage(msg, w)
 			}
 		case "assistant":
-			// Track collapsible section positions before rendering
-			blockLine := lineCount + 2 // account for the label line
-			for _, block := range msg.ContentBlocks {
-				switch block.Type {
-				case "thinking":
-					collapsibleLines["thinking:"+msg.UUID] = blockLine
-				case "tool_use":
-					collapsibleLines["tool:"+block.ToolID] = blockLine
-				}
+			var blockPositions map[string]int
+			rendered, blockPositions = m.renderAssistantMessage(msg, w, lineCount)
+			for k, v := range blockPositions {
+				collapsibleLines[k] = v
 			}
-			rendered = m.renderAssistantMessage(msg, w)
 		case "system":
 			if msg.Subtype == "turn_duration" && msg.DurationMs > 0 {
 				rendered = m.renderSystemMessage(msg, w)
@@ -110,16 +104,22 @@ func (m Model) renderUserMessage(msg data.Message, w int) string {
 	return label + "\n" + body
 }
 
-func (m Model) renderAssistantMessage(msg data.Message, w int) string {
+func (m Model) renderAssistantMessage(msg data.Message, w int, baseLineCount int) (string, map[string]int) {
 	ts := timestampStyle.Render(msg.Timestamp.Format("15:04:05"))
 	avatar := avatarAssistantStyle.Render("◆")
 	label := " " + avatar + " " + assistantLabelStyle.Render("Claude") + " " + ts
 
 	var sections []string
 	sections = append(sections, label)
+	positions := make(map[string]int)
 
-	// Render each content block in order
+	// Track line count within this message to record exact positions
+	localLines := strings.Count(label, "\n") + 1
+
 	for _, block := range msg.ContentBlocks {
+		var rendered string
+		var key string
+
 		switch block.Type {
 		case "text":
 			if block.Text == "" {
@@ -129,22 +129,35 @@ func (m Model) renderAssistantMessage(msg data.Message, w int) string {
 			if err != nil || strings.TrimSpace(mdRendered) == "" {
 				mdRendered = block.Text
 			}
-			sections = append(sections, assistantBubbleStyle.Width(w).Render(mdRendered))
+			rendered = assistantBubbleStyle.Width(w).Render(mdRendered)
 
 		case "thinking":
-			sections = append(sections, m.renderThinkingBlock(block, msg.UUID, w))
+			key = "thinking:" + msg.UUID
+			rendered = m.renderThinkingBlock(block, msg.UUID, w)
 
 		case "tool_use":
-			sections = append(sections, m.renderToolCall(block, msg, w))
+			key = "tool:" + block.ToolID
+			rendered = m.renderToolCall(block, msg, w)
 		}
+
+		if rendered == "" {
+			continue
+		}
+
+		// Record the absolute line position of this collapsible block
+		if key != "" {
+			positions[key] = baseLineCount + localLines
+		}
+
+		sections = append(sections, rendered)
+		localLines += strings.Count(rendered, "\n") + 1
 	}
 
-	// Token info
 	if msg.Usage.OutputTokens > 0 {
 		sections = append(sections, m.renderTokenInfo(msg))
 	}
 
-	return strings.Join(sections, "\n")
+	return strings.Join(sections, "\n"), positions
 }
 
 func (m Model) renderThinkingBlock(block data.ContentBlock, msgUUID string, w int) string {
