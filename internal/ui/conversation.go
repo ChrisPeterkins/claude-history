@@ -33,7 +33,6 @@ func (m Model) renderConversation() renderResult {
 	w := m.conversationWidth() - conversationPadding
 	var parts []string
 	var userLines []int
-	collapsibleLines := make(map[string]int)
 	lineCount := 0
 
 	// Compute and render stats header
@@ -59,11 +58,7 @@ func (m Model) renderConversation() renderResult {
 				rendered = m.renderUserMessage(msg, w)
 			}
 		case "assistant":
-			var blockPositions map[string]int
-			rendered, blockPositions = m.renderAssistantMessage(msg, w, lineCount)
-			for k, v := range blockPositions {
-				collapsibleLines[k] = v
-			}
+			rendered = m.renderAssistantMessage(msg, w)
 		case "system":
 			if msg.Subtype == "turn_duration" && msg.DurationMs > 0 {
 				rendered = m.renderSystemMessage(msg, w)
@@ -77,11 +72,55 @@ func (m Model) renderConversation() renderResult {
 		}
 	}
 
+	content := strings.Join(parts, "\n")
+
+	// Scan the final output to find exact line positions of collapsible sections.
+	// This is the only reliable way since glamour output has unpredictable height.
+	collapsibleLines := scanCollapsibleLines(content, m.messages)
+
 	return renderResult{
-		content:          strings.Join(parts, "\n"),
+		content:          content,
 		userLines:        userLines,
 		collapsibleLines: collapsibleLines,
 	}
+}
+
+// scanCollapsibleLines finds the line numbers of collapsible section headers
+// in the final rendered content by matching the arrow markers (▸/▾).
+// Returns a map of sequential index → line number for use by the highlight.
+func scanCollapsibleLines(content string, messages []data.Message) map[string]int {
+	result := make(map[string]int)
+	lines := strings.Split(content, "\n")
+
+	// Build ordered list of collapsible keys from messages
+	var keys []string
+	for _, msg := range messages {
+		if msg.Type != "assistant" {
+			continue
+		}
+		for _, block := range msg.ContentBlocks {
+			switch block.Type {
+			case "thinking":
+				keys = append(keys, "thinking:"+msg.UUID)
+			case "tool_use":
+				keys = append(keys, "tool:"+block.ToolID)
+			}
+		}
+	}
+
+	// Find lines containing ▸ or ▾ (collapsible headers) and match to keys in order
+	keyIdx := 0
+	for lineNum, line := range lines {
+		if keyIdx >= len(keys) {
+			break
+		}
+		if strings.Contains(line, "▸") || strings.Contains(line, "▾") {
+			result[keys[keyIdx]] = lineNum
+			keyIdx++
+		}
+	}
+
+	return result
 }
 
 func (m Model) renderUserMessage(msg data.Message, w int) string {
@@ -104,22 +143,15 @@ func (m Model) renderUserMessage(msg data.Message, w int) string {
 	return label + "\n" + body
 }
 
-func (m Model) renderAssistantMessage(msg data.Message, w int, baseLineCount int) (string, map[string]int) {
+func (m Model) renderAssistantMessage(msg data.Message, w int) string {
 	ts := timestampStyle.Render(msg.Timestamp.Format("15:04:05"))
 	avatar := avatarAssistantStyle.Render("◆")
 	label := " " + avatar + " " + assistantLabelStyle.Render("Claude") + " " + ts
 
 	var sections []string
 	sections = append(sections, label)
-	positions := make(map[string]int)
-
-	// Track line count within this message to record exact positions
-	localLines := strings.Count(label, "\n") + 1
 
 	for _, block := range msg.ContentBlocks {
-		var rendered string
-		var key string
-
 		switch block.Type {
 		case "text":
 			if block.Text == "" {
@@ -129,35 +161,21 @@ func (m Model) renderAssistantMessage(msg data.Message, w int, baseLineCount int
 			if err != nil || strings.TrimSpace(mdRendered) == "" {
 				mdRendered = block.Text
 			}
-			rendered = assistantBubbleStyle.Width(w).Render(mdRendered)
+			sections = append(sections, assistantBubbleStyle.Width(w).Render(mdRendered))
 
 		case "thinking":
-			key = "thinking:" + msg.UUID
-			rendered = m.renderThinkingBlock(block, msg.UUID, w)
+			sections = append(sections, m.renderThinkingBlock(block, msg.UUID, w))
 
 		case "tool_use":
-			key = "tool:" + block.ToolID
-			rendered = m.renderToolCall(block, msg, w)
+			sections = append(sections, m.renderToolCall(block, msg, w))
 		}
-
-		if rendered == "" {
-			continue
-		}
-
-		// Record the absolute line position of this collapsible block
-		if key != "" {
-			positions[key] = baseLineCount + localLines
-		}
-
-		sections = append(sections, rendered)
-		localLines += strings.Count(rendered, "\n") + 1
 	}
 
 	if msg.Usage.OutputTokens > 0 {
 		sections = append(sections, m.renderTokenInfo(msg))
 	}
 
-	return strings.Join(sections, "\n"), positions
+	return strings.Join(sections, "\n")
 }
 
 func (m Model) renderThinkingBlock(block data.ContentBlock, msgUUID string, w int) string {
