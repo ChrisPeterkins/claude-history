@@ -384,11 +384,19 @@ func (m *Model) toggleCollapsibleAtCursor() {
 	}
 }
 
-// refreshHighlight re-renders the conversation with the current scroll position's
-// nearest collapsible section highlighted, preserving the scroll position.
+// refreshHighlight updates the highlighted collapsible section based on scroll position.
+// Only re-renders if the targeted section actually changed to avoid lag.
 func (m *Model) refreshHighlight() {
+	newKey := m.nearestCollapsibleKey()
+	if newKey == m.highlightKey {
+		return // no change, skip expensive re-render
+	}
 	offset := m.viewport.YOffset
-	m.updateConversationContent()
+	m.highlightKey = newKey
+	result := m.renderConversation()
+	m.viewport.SetContent(result.content)
+	m.userMessageLines = result.userLines
+	m.collapsibleLines = result.collapsibleLines
 	m.viewport.SetYOffset(offset)
 }
 

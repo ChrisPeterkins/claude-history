@@ -140,22 +140,21 @@ func (m *Model) rebuildRenderer() {
 
 // updateConversationContent re-renders the conversation and updates the viewport and line tracking.
 func (m *Model) updateConversationContent() {
-	// First pass: render to get collapsible line positions
+	// Render with current highlight key
 	result := m.renderConversation()
 	m.userMessageLines = result.userLines
 	m.collapsibleLines = result.collapsibleLines
+	m.viewport.SetContent(result.content)
 
-	// Compute highlight from the positions we just got
+	// Check if highlight needs updating based on new positions
 	newKey := m.nearestCollapsibleKey()
 	if newKey != m.highlightKey {
-		// Second pass: re-render with the highlight applied
 		m.highlightKey = newKey
 		result = m.renderConversation()
 		m.userMessageLines = result.userLines
 		m.collapsibleLines = result.collapsibleLines
+		m.viewport.SetContent(result.content)
 	}
-
-	m.viewport.SetContent(result.content)
 }
 
 func (m Model) Init() tea.Cmd {
@@ -259,15 +258,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// Update viewport if in conversation panel
 	if m.focus == panelConversation {
-		prevOffset := m.viewport.YOffset
 		var cmd tea.Cmd
 		m.viewport, cmd = m.viewport.Update(msg)
-		// Re-render if scroll position changed (to update highlight)
-		if m.viewport.YOffset != prevOffset {
-			offset := m.viewport.YOffset
-			m.updateConversationContent()
-			m.viewport.SetYOffset(offset) // restore scroll after re-render
-		}
+		m.refreshHighlight()
 		return m, cmd
 	}
 
