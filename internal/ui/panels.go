@@ -342,30 +342,34 @@ func (m Model) renderHeader() string {
 	return logo + fill + breadcrumb
 }
 
-// applyLineHighlight adds a background highlight to the cursor line of the
-// viewport output. Uses viewport.Height/2 as the cursor position, matching
-// the same calculation used by nearestCollapsibleKey for space-bar targeting.
+// applyLineHighlight highlights the line of the nearest collapsible section
+// in the viewport output. Finds which section space-bar would target, then
+// highlights its actual line position — not just the visual center.
 func (m Model) applyLineHighlight(viewOutput string, maxWidth int) string {
 	if m.focus != panelConversation || viewOutput == "" {
 		return viewOutput
 	}
 
+	// Find which collapsible section space would target
+	key := m.nearestCollapsibleKey()
+	if key == "" {
+		return viewOutput
+	}
+
+	// Get the absolute line of that section and convert to viewport-relative
+	absLine, ok := m.collapsibleLines[key]
+	if !ok {
+		return viewOutput
+	}
+	relativeLine := absLine - m.viewport.YOffset
+
 	lines := strings.Split(viewOutput, "\n")
-	if len(lines) == 0 {
+	if relativeLine < 0 || relativeLine >= len(lines) {
 		return viewOutput
 	}
 
-	// Must match highlightTargetLine: viewport.Height/2
-	center := m.viewport.Height / 2
-	if center >= len(lines) {
-		center = len(lines) - 1
-	}
-	if center < 0 {
-		return viewOutput
-	}
-
-	lines[center] = selectedItemStyle.Width(maxWidth).Render(
-		strings.TrimRight(lines[center], " "),
+	lines[relativeLine] = selectedItemStyle.Width(maxWidth).Render(
+		strings.TrimRight(lines[relativeLine], " "),
 	)
 
 	return strings.Join(lines, "\n")
