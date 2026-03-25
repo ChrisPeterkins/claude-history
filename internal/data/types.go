@@ -7,8 +7,9 @@ type Project struct {
 	Name        string // human-readable name (last path segment)
 	Path        string // original project path (e.g., /Users/.../MyProject)
 	DirName     string // encoded directory name in ~/.claude/projects/
-	Sessions    []Session
-	HistoryOnly bool // true if this project only has history.jsonl entries (no full sessions)
+	Sessions     []Session
+	SessionCount int  // number of sessions (for display in project list)
+	HistoryOnly  bool // true if this project only has history.jsonl entries (no full sessions)
 }
 
 // Session represents a single conversation session.

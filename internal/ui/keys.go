@@ -8,9 +8,37 @@ import (
 )
 
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Help overlay intercepts all keys
+	if m.showHelp {
+		switch msg.String() {
+		case "?", "esc", "q":
+			m.showHelp = false
+		}
+		return m, nil
+	}
+
+	// Handle mark input mode (waiting for a-z after m or ')
+	if m.awaitingMark != "" {
+		return m.handleMarkKey(msg)
+	}
+
 	switch msg.String() {
 	case "q", "ctrl+c":
 		return m, tea.Quit
+
+	case "?":
+		m.showHelp = true
+		return m, nil
+
+	case "m":
+		m.awaitingMark = "set"
+		m.statusMessage = "Set mark: a-z"
+		return m, nil
+
+	case "'":
+		m.awaitingMark = "jump"
+		m.statusMessage = "Jump to mark: a-z"
+		return m, nil
 
 	case "/":
 		m.searchMode = true
@@ -104,7 +132,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case panelSessions:
 			if m.sessionCursor > 0 {
 				m.sessionCursor--
-				return m, m.loadMessagesCmd()
+				return m, m.loadMessagesWithSpinner()
 			}
 		case panelConversation:
 			var cmd tea.Cmd
@@ -123,7 +151,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case panelSessions:
 			if m.sessionCursor < len(m.sessions)-1 {
 				m.sessionCursor++
-				return m, m.loadMessagesCmd()
+				return m, m.loadMessagesWithSpinner()
 			}
 		case panelConversation:
 			var cmd tea.Cmd
@@ -137,6 +165,76 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, m.copyConversationCmd()
 		}
 		return m, nil
+
+	case "g":
+		// Jump to top
+		switch m.focus {
+		case panelProjects:
+			if m.projectCursor != 0 {
+				m.projectCursor = 0
+				m.sessionCursor = 0
+				return m, m.loadSessionsCmd()
+			}
+		case panelSessions:
+			if m.sessionCursor != 0 {
+				m.sessionCursor = 0
+				return m, m.loadMessagesWithSpinner()
+			}
+		case panelConversation:
+			m.viewport.GotoTop()
+		}
+		return m, nil
+
+	case "G":
+		// Jump to bottom
+		switch m.focus {
+		case panelProjects:
+			last := len(m.projects) - 1
+			if last >= 0 && m.projectCursor != last {
+				m.projectCursor = last
+				m.sessionCursor = 0
+				return m, m.loadSessionsCmd()
+			}
+		case panelSessions:
+			last := len(m.sessions) - 1
+			if last >= 0 && m.sessionCursor != last {
+				m.sessionCursor = last
+				return m, m.loadMessagesWithSpinner()
+			}
+		case panelConversation:
+			m.viewport.GotoBottom()
+		}
+		return m, nil
+
+	case "pgup":
+		switch m.focus {
+		case panelProjects:
+			m.projectCursor = clamp(m.projectCursor-m.contentHeight()/2, 0, max(0, len(m.projects)-1))
+			m.sessionCursor = 0
+			return m, m.loadSessionsCmd()
+		case panelSessions:
+			m.sessionCursor = clamp(m.sessionCursor-m.contentHeight()/2, 0, max(0, len(m.sessions)-1))
+			return m, m.loadMessagesWithSpinner()
+		case panelConversation:
+			var cmd tea.Cmd
+			m.viewport, cmd = m.viewport.Update(msg)
+			return m, cmd
+		}
+
+	case "pgdown":
+		switch m.focus {
+		case panelProjects:
+			m.projectCursor = clamp(m.projectCursor+m.contentHeight()/2, 0, max(0, len(m.projects)-1))
+			m.sessionCursor = 0
+			return m, m.loadSessionsCmd()
+		case panelSessions:
+			m.sessionCursor = clamp(m.sessionCursor+m.contentHeight()/2, 0, max(0, len(m.sessions)-1))
+			return m, m.loadMessagesWithSpinner()
+		case panelConversation:
+			var cmd tea.Cmd
+			m.viewport, cmd = m.viewport.Update(msg)
+			return m, cmd
+		}
 
 	case "n":
 		// Jump to next user message
@@ -319,6 +417,24 @@ func (m *Model) rebuildRendererIfNeeded() {
 			m.viewport.SetContent(m.renderConversation())
 		}
 	}
+}
+
+// triggerTransition sets a brief highlight effect on the newly focused panel.
+func (m *Model) triggerTransition() tea.Cmd {
+	m.transitionUntil = time.Now().Add(150 * time.Millisecond)
+	return tea.Tick(150*time.Millisecond, func(time.Time) tea.Msg {
+		return transitionDoneMsg{}
+	})
+}
+
+// loadMessagesWithSpinner saves scroll position, sets loading state, and loads messages.
+func (m *Model) loadMessagesWithSpinner() tea.Cmd {
+	// Save current scroll position before switching
+	if m.sessionCursor < len(m.sessions) {
+		m.scrollPositions[m.sessions[m.sessionCursor].ID] = m.viewport.YOffset
+	}
+	m.loading = true
+	return tea.Batch(m.loadMessagesCmd(), m.spinner.Tick)
 }
 
 // ensure textinput import is used

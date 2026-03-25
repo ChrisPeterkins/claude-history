@@ -3,6 +3,7 @@ package ui
 import (
 	"time"
 
+	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -44,6 +45,16 @@ type Model struct {
 	// Collapsible sections: key -> collapsed (true = collapsed)
 	collapsed map[string]bool
 
+	// Help overlay
+	showHelp bool
+
+	// Loading spinner
+	spinner spinner.Model
+	loading bool
+
+	// Scroll position memory (sessionID → YOffset)
+	scrollPositions map[string]int
+
 	// Message jumping: line numbers where user messages start
 	userMessageLines []int
 
@@ -53,9 +64,17 @@ type Model struct {
 	searchResults []SearchResult
 	searchCursor  int
 
+	// Vim marks
+	marks            map[rune]markPosition
+	awaitingMark     string // "" | "set" | "jump"
+	pendingMarkOffset *int  // offset to restore after cross-session mark jump
+
 	// Status flash message
 	statusMessage string
 	statusExpiry  time.Time
+
+	// Transition effect
+	transitionUntil time.Time
 
 	// Theme
 	themeIndex int
@@ -80,10 +99,17 @@ func NewModel() Model {
 	ti.Placeholder = "Search conversations..."
 	ti.CharLimit = 100
 
+	s := spinner.New()
+	s.Spinner = spinner.Dot
+	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#88C0D0"))
+
 	return Model{
-		renderer:  r,
-		collapsed: make(map[string]bool),
-		searchInput: ti,
+		renderer:        r,
+		collapsed:       make(map[string]bool),
+		searchInput:     ti,
+		spinner:         s,
+		scrollPositions: make(map[string]int),
+		marks:           make(map[rune]markPosition),
 	}
 }
 
@@ -118,6 +144,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m.handleKey(msg)
 
+	case tea.MouseMsg:
+		if !m.searchMode && !m.showHelp {
+			return m.handleMouse(msg)
+		}
+
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
@@ -141,7 +172,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.sessions = msg.sessions
 		m.sessionCursor = 0
 		if len(m.sessions) > 0 {
-			return m, m.loadMessagesCmd()
+			m.loading = true
+			return m, tea.Batch(m.loadMessagesCmd(), m.spinner.Tick)
 		}
 		m.messages = nil
 		m.viewport.SetContent(emptyStyle.Render("No sessions found"))
@@ -149,9 +181,31 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case messagesLoaded:
 		m.messages = msg.messages
-		m.collapsed = make(map[string]bool) // reset collapsed state for new session
+		m.loading = false
+		m.collapsed = make(map[string]bool)
 		m.viewport.SetContent(m.renderConversation())
-		m.viewport.GotoTop()
+		// Pending mark jump takes priority
+		if m.pendingMarkOffset != nil {
+			m.viewport.SetYOffset(*m.pendingMarkOffset)
+			m.pendingMarkOffset = nil
+		} else if m.sessionCursor < len(m.sessions) {
+			// Restore scroll position if we've been here before
+			if offset, ok := m.scrollPositions[m.sessions[m.sessionCursor].ID]; ok {
+				m.viewport.SetYOffset(offset)
+			} else {
+				m.viewport.GotoTop()
+			}
+		} else {
+			m.viewport.GotoTop()
+		}
+		return m, nil
+
+	case spinner.TickMsg:
+		if m.loading {
+			var cmd tea.Cmd
+			m.spinner, cmd = m.spinner.Update(msg)
+			return m, cmd
+		}
 		return m, nil
 
 	case searchResultsMsg:
@@ -170,6 +224,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case statusClearMsg:
 		m.statusMessage = ""
 		return m, nil
+
+	case transitionDoneMsg:
+		// Forces a re-render to clear the transition highlight
+		return m, nil
 	}
 
 	// Update viewport if in conversation panel
@@ -185,6 +243,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) View() string {
 	if !m.ready {
 		return "\n  Loading..."
+	}
+
+	if m.showHelp {
+		return m.renderHelpOverlay()
 	}
 
 	if m.searchMode {
@@ -227,6 +289,9 @@ func (m Model) View() string {
 
 // statusClearMsg clears the flash message.
 type statusClearMsg struct{}
+
+// transitionDoneMsg signals that a panel transition animation has completed.
+type transitionDoneMsg struct{}
 
 func clearStatusAfter(d time.Duration) tea.Cmd {
 	return tea.Tick(d, func(time.Time) tea.Msg {

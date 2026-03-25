@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/chrispeterkins/claude-history/internal/data"
@@ -62,4 +63,27 @@ func GroupSessionsByDate(sessions []data.Session) []DateGroup {
 		}
 	}
 	return result
+}
+
+// relativeTime returns a human-friendly relative timestamp.
+func relativeTime(t time.Time) string {
+	now := time.Now()
+	d := now.Sub(t)
+
+	switch {
+	case d < time.Minute:
+		return "just now"
+	case d < time.Hour:
+		return fmt.Sprintf("%dm ago", int(d.Minutes()))
+	case d < 24*time.Hour:
+		return fmt.Sprintf("%dh ago", int(d.Hours()))
+	case d < 48*time.Hour:
+		return "yesterday"
+	case d < 14*24*time.Hour:
+		return fmt.Sprintf("%dd ago", int(d.Hours()/24))
+	case d < 8*7*24*time.Hour:
+		return fmt.Sprintf("%dw ago", int(d.Hours()/(24*7)))
+	default:
+		return t.Format("Jan 02")
+	}
 }

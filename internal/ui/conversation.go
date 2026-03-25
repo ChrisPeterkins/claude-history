@@ -6,8 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/lipgloss"
-
 	"github.com/chrispeterkins/claude-history/internal/data"
 )
 
@@ -21,12 +19,19 @@ func (m *Model) renderConversation() string {
 	m.userMessageLines = nil
 	lineCount := 0
 
+	hasRendered := false
 	for _, msg := range m.messages {
 		var rendered string
 
 		switch msg.Type {
 		case "user":
 			if msg.RawText != "" {
+				// Add turn divider before user messages (except the first)
+				if hasRendered {
+					divider := turnDividerStyle.Render(strings.Repeat("─", w))
+					parts = append(parts, divider)
+					lineCount += 2
+				}
 				m.userMessageLines = append(m.userMessageLines, lineCount)
 				rendered = m.renderUserMessage(msg, w)
 			}
@@ -41,6 +46,7 @@ func (m *Model) renderConversation() string {
 		if rendered != "" {
 			parts = append(parts, rendered)
 			lineCount += strings.Count(rendered, "\n") + 2
+			hasRendered = true
 		}
 	}
 
@@ -102,10 +108,10 @@ func (m Model) renderThinkingBlock(block data.ContentBlock, msgUUID string, w in
 	collapsed := m.isCollapsed(key)
 
 	if collapsed {
-		return thinkingHeaderStyle.Render("  ▸ Thinking...")
+		return thinkingGutterStyle.Render(thinkingHeaderStyle.Render("▸ Thinking..."))
 	}
 
-	header := thinkingHeaderStyle.Render("  ▾ Thinking")
+	header := thinkingHeaderStyle.Render("▾ Thinking")
 	text := block.Thinking
 	if text == "" {
 		text = "(redacted)"
@@ -113,8 +119,8 @@ func (m Model) renderThinkingBlock(block data.ContentBlock, msgUUID string, w in
 	if len(text) > 2000 {
 		text = text[:2000] + "\n... (truncated)"
 	}
-	body := thinkingBodyStyle.Width(w - 4).Render(text)
-	return header + "\n" + body
+	body := thinkingBodyStyle.Width(w - 6).Render(text)
+	return thinkingGutterStyle.Render(header + "\n" + body)
 }
 
 func (m Model) renderToolCall(block data.ContentBlock, msg data.Message, w int) string {
@@ -128,11 +134,11 @@ func (m Model) renderToolCall(block data.ContentBlock, msg data.Message, w int) 
 		arrow = "▾"
 	}
 
-	header := toolHeaderStyle.Render(fmt.Sprintf("  %s %s", arrow, toolBadgeStyle.Render(block.ToolName))) +
+	header := toolHeaderStyle.Render(fmt.Sprintf("%s %s", arrow, toolBadgeStyle.Render(block.ToolName))) +
 		" " + toolHeaderStyle.Render(summary)
 
 	if collapsed {
-		return header
+		return toolGutterCollapsedStyle.Render(header)
 	}
 
 	var bodyParts []string
@@ -140,7 +146,7 @@ func (m Model) renderToolCall(block data.ContentBlock, msg data.Message, w int) 
 	// Show input
 	inputStr := formatToolInput(block)
 	if inputStr != "" {
-		bodyParts = append(bodyParts, toolBodyStyle.Width(w-4).Render(inputStr))
+		bodyParts = append(bodyParts, toolBodyStyle.Width(w-6).Render(inputStr))
 	}
 
 	// Find and show the paired result
@@ -152,20 +158,21 @@ func (m Model) renderToolCall(block data.ContentBlock, msg data.Message, w int) 
 					result = result[:3000] + "\n... (truncated)"
 				}
 				if pair.Result.IsError {
-					bodyParts = append(bodyParts, toolErrorStyle.Width(w-4).Render("Error: "+result))
+					bodyParts = append(bodyParts, toolErrorStyle.Width(w-6).Render("Error: "+result))
 				} else {
-					bodyParts = append(bodyParts, toolBodyStyle.Width(w-4).Render(result))
+					bodyParts = append(bodyParts, toolBodyStyle.Width(w-6).Render(result))
 				}
 			}
 			break
 		}
 	}
 
-	if len(bodyParts) == 0 {
-		return header
+	content := header
+	if len(bodyParts) > 0 {
+		content += "\n" + strings.Join(bodyParts, "\n")
 	}
 
-	return header + "\n" + strings.Join(bodyParts, "\n")
+	return toolGutterExpandedStyle.Render(content)
 }
 
 func (m Model) renderSystemMessage(msg data.Message, w int) string {
@@ -203,94 +210,6 @@ func (m Model) isCollapsed(key string) bool {
 		return true // default: collapsed
 	}
 	return collapsed
-}
-
-func (m Model) renderHelp() string {
-	allPairs := []struct{ key, desc string }{
-		{"tab", "panel"},
-		{"↑/↓", "navigate"},
-		{"f", "fullscreen"},
-		{"/", "search"},
-		{"space", "expand"},
-		{"n/N", "jump"},
-		{"y", "copy"},
-		{"t", "theme"},
-		{"q", "quit"},
-	}
-
-	// Show fewer keybindings on narrow terminals
-	pairs := allPairs
-	if m.width < 100 {
-		pairs = []struct{ key, desc string }{
-			{"f", "full"}, {"/", "search"}, {"t", "theme"}, {"q", "quit"},
-		}
-	} else if m.width < 140 {
-		pairs = []struct{ key, desc string }{
-			{"tab", "panel"}, {"f", "full"}, {"/", "search"},
-			{"space", "expand"}, {"y", "copy"}, {"t", "theme"}, {"q", "quit"},
-		}
-	}
-
-	var items []string
-	for _, p := range pairs {
-		items = append(items, helpKeyStyle.Render(p.key)+" "+helpDescStyle.Render(p.desc))
-	}
-
-	logo := logoStyle.Render("◈ Claude History")
-
-	// Breadcrumb
-	breadcrumb := m.renderBreadcrumb()
-
-	left := logo
-	if breadcrumb != "" && m.width >= 80 {
-		left += statusBarStyle.Render("  │  ") + breadcrumb
-	}
-
-	// Status flash message
-	if m.statusMessage != "" {
-		left += statusBarStyle.Render("  ") + helpKeyStyle.Render(m.statusMessage)
-	}
-
-	bar := lipgloss.JoinHorizontal(lipgloss.Center,
-		left,
-		statusBarStyle.Render("  │  "),
-		strings.Join(items, statusBarStyle.Render("  ·  ")),
-	)
-
-	return statusBarStyle.Width(m.width).Render(bar)
-}
-
-func (m Model) renderBreadcrumb() string {
-	var parts []string
-
-	if m.projectCursor < len(m.projects) {
-		parts = append(parts, m.projects[m.projectCursor].Name)
-	}
-
-	if m.sessionCursor < len(m.sessions) {
-		s := m.sessions[m.sessionCursor]
-		parts = append(parts, s.StartedAt.Format("Jan 02"))
-	}
-
-	// Current message position
-	if m.focus == panelConversation && len(m.userMessageLines) > 0 {
-		currentLine := m.viewport.YOffset
-		msgIdx := 0
-		for i, line := range m.userMessageLines {
-			if line <= currentLine {
-				msgIdx = i + 1
-			}
-		}
-		if msgIdx > 0 {
-			parts = append(parts, fmt.Sprintf("Msg %d/%d", msgIdx, len(m.userMessageLines)))
-		}
-	}
-
-	if len(parts) == 0 {
-		return ""
-	}
-
-	return timestampStyle.Render(strings.Join(parts, " › "))
 }
 
 // --- Helpers ---
@@ -438,4 +357,14 @@ func max(a, b int) int {
 		return a
 	}
 	return b
+}
+
+func clamp(val, lo, hi int) int {
+	if val < lo {
+		return lo
+	}
+	if val > hi {
+		return hi
+	}
+	return val
 }

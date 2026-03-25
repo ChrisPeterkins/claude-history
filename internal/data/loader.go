@@ -40,10 +40,20 @@ func LoadProjects() ([]Project, error) {
 			realPath = decodeDirToPath(dirName)
 		}
 
+		// Count session files
+		sessionCount := 0
+		subEntries, _ := os.ReadDir(filepath.Join(projectsDir, dirName))
+		for _, se := range subEntries {
+			if !se.IsDir() && strings.HasSuffix(se.Name(), ".jsonl") {
+				sessionCount++
+			}
+		}
+
 		p := Project{
-			Name:    name,
-			Path:    realPath,
-			DirName: dirName,
+			Name:         name,
+			Path:         realPath,
+			DirName:      dirName,
+			SessionCount: sessionCount,
 		}
 		projects = append(projects, p)
 	}

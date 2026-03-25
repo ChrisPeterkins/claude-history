@@ -177,6 +177,55 @@ var (
 			MarginTop(1)
 )
 
+// Transition highlight
+var (
+	transitionPanelStyle = lipgloss.NewStyle().
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(colorAccent).
+				Padding(0, 1)
+)
+
+// Tool call gutter styles
+var (
+	toolGutterCollapsedStyle = lipgloss.NewStyle().
+					Border(lipgloss.NormalBorder(), false, false, false, true).
+					BorderForeground(colorSubtle).
+					PaddingLeft(1)
+
+	toolGutterExpandedStyle = lipgloss.NewStyle().
+				Border(lipgloss.NormalBorder(), false, false, false, true).
+				BorderForeground(colorWarm).
+				PaddingLeft(1)
+
+	thinkingGutterStyle = lipgloss.NewStyle().
+				Border(lipgloss.NormalBorder(), false, false, false, true).
+				BorderForeground(colorFgDim).
+				PaddingLeft(1)
+)
+
+// Turn divider
+var (
+	turnDividerStyle = lipgloss.NewStyle().
+				Foreground(colorSubtle)
+)
+
+// Help overlay
+var (
+	helpOverlayStyle = lipgloss.NewStyle().
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(colorPrimary).
+				Padding(1, 2)
+
+	helpOverlayTitleStyle = lipgloss.NewStyle().
+				Foreground(colorPrimary).
+				Bold(true).
+				Align(lipgloss.Center)
+
+	helpSectionStyle = lipgloss.NewStyle().
+				Foreground(colorWarm).
+				Bold(true)
+)
+
 // Empty state
 var (
 	emptyStyle = lipgloss.NewStyle().

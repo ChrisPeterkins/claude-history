@@ -132,6 +132,7 @@ func LoadHistory() ([]Project, error) {
 		})
 
 		p.Sessions = sessions
+		p.SessionCount = len(sessions)
 		projects = append(projects, p)
 	}
 

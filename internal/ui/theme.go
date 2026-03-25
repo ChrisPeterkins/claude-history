@@ -230,6 +230,43 @@ func rebuildStyles() {
 		Padding(0, 1).
 		MarginTop(1)
 
+	transitionPanelStyle = lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(colorAccent).
+		Padding(0, 1)
+
+	toolGutterCollapsedStyle = lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder(), false, false, false, true).
+		BorderForeground(colorSubtle).
+		PaddingLeft(1)
+
+	toolGutterExpandedStyle = lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder(), false, false, false, true).
+		BorderForeground(colorWarm).
+		PaddingLeft(1)
+
+	thinkingGutterStyle = lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder(), false, false, false, true).
+		BorderForeground(colorFgDim).
+		PaddingLeft(1)
+
+	turnDividerStyle = lipgloss.NewStyle().
+		Foreground(colorSubtle)
+
+	helpOverlayStyle = lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(colorPrimary).
+		Padding(1, 2)
+
+	helpOverlayTitleStyle = lipgloss.NewStyle().
+		Foreground(colorPrimary).
+		Bold(true).
+		Align(lipgloss.Center)
+
+	helpSectionStyle = lipgloss.NewStyle().
+		Foreground(colorWarm).
+		Bold(true)
+
 	emptyStyle = lipgloss.NewStyle().
 		Foreground(colorFgDim).
 		Italic(true).

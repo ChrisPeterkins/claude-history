@@ -35,12 +35,15 @@ func (m Model) renderProjectsPanel() string {
 	visibleStart, visibleEnd := m.visibleRange(m.projectCursor, len(m.projects), h-2)
 	for i := visibleStart; i < visibleEnd; i++ {
 		p := m.projects[i]
-		name := truncateStr(p.Name, w-6)
-		// Dim indicator for history-only projects
+		// Build suffix with session count and history indicator
 		suffix := ""
-		if p.HistoryOnly {
-			suffix = " ○"
+		if p.SessionCount > 0 {
+			suffix = tokenStyle.Render(fmt.Sprintf(" (%d)", p.SessionCount))
 		}
+		if p.HistoryOnly {
+			suffix += " ○"
+		}
+		name := truncateStr(p.Name, w-8)
 		if i == m.projectCursor {
 			items = append(items, selectedItemStyle.Width(w-4).Render("▸ "+name+suffix))
 		} else {
@@ -50,12 +53,7 @@ func (m Model) renderProjectsPanel() string {
 
 	content := lipgloss.JoinVertical(lipgloss.Left, items...)
 
-	style := panelStyle
-	if m.focus == panelProjects {
-		style = activePanelStyle
-	}
-
-	return style.Width(w).Height(h).Render(content)
+	return m.panelStyleFor(panelProjects).Width(w).Height(h).Render(content)
 }
 
 func (m Model) renderSessionsPanel() string {
@@ -104,7 +102,7 @@ func (m Model) renderSessionsPanel() string {
 			}
 
 			s := item.session
-			date := s.StartedAt.Format("Jan 02 15:04")
+			date := relativeTime(s.StartedAt)
 			preview := truncateStr(s.Preview, w-6)
 			if preview == "" {
 				preview = "(empty session)"
@@ -125,12 +123,7 @@ func (m Model) renderSessionsPanel() string {
 
 	content := lipgloss.JoinVertical(lipgloss.Left, items...)
 
-	style := panelStyle
-	if m.focus == panelSessions {
-		style = activePanelStyle
-	}
-
-	return style.Width(w).Height(h).Render(content)
+	return m.panelStyleFor(panelSessions).Width(w).Height(h).Render(content)
 }
 
 func (m Model) renderConversationPanel() string {
@@ -153,14 +146,16 @@ func (m Model) renderConversationPanel() string {
 	m.viewport.Width = w - 4
 	m.viewport.Height = h - 3
 
-	content := lipgloss.JoinVertical(lipgloss.Left, header, m.viewport.View())
-
-	style := panelStyle
-	if m.focus == panelConversation {
-		style = activePanelStyle
+	var body string
+	if m.loading {
+		body = "\n\n" + emptyStyle.Width(w-4).Render(m.spinner.View()+" Loading session...")
+	} else {
+		body = m.viewport.View()
 	}
 
-	return style.Width(w).Height(h).Render(content)
+	content := lipgloss.JoinVertical(lipgloss.Left, header, body)
+
+	return m.panelStyleFor(panelConversation).Width(w).Height(h).Render(content)
 }
 
 // --- Layout math ---
@@ -263,4 +258,15 @@ func sessionStatsLine(s data.Session) string {
 		return formatSize(s.FileSize)
 	}
 	return strings.Join(parts, " · ")
+}
+
+// panelStyleFor returns the appropriate border style for a panel.
+func (m Model) panelStyleFor(panel int) lipgloss.Style {
+	if m.focus == panel && time.Now().Before(m.transitionUntil) {
+		return transitionPanelStyle
+	}
+	if m.focus == panel {
+		return activePanelStyle
+	}
+	return panelStyle
 }
