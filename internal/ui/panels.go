@@ -166,30 +166,48 @@ func (m Model) renderConversationPanel() string {
 // --- Layout math ---
 
 func (m Model) projectsWidth() int {
-	if m.fullScreen {
+	// Single panel mode: take full width
+	if (m.fullScreen || m.width < 60) && m.focus == panelProjects {
+		return m.width
+	}
+	if m.fullScreen || m.width < 60 {
 		return 0
 	}
-	// At small widths, give projects less space
+	// Two-panel mode at medium width
 	if m.width < 100 {
-		return max(16, m.width/6)
+		if m.focus == panelProjects {
+			return max(20, m.width*2/5)
+		}
+		return 0 // hidden when focus is sessions or conversation
 	}
 	return max(20, m.width/5)
 }
 
 func (m Model) sessionsWidth() int {
+	// Single panel mode: take full width
+	if (m.fullScreen || m.width < 60) && m.focus == panelSessions {
+		return m.width
+	}
 	if m.fullScreen || m.width < 60 {
 		return 0
 	}
-	// Medium width: projects hidden, sessions gets more space
+	// Two-panel mode at medium width
 	if m.width < 100 {
+		if m.focus == panelProjects {
+			return m.width - m.projectsWidth()
+		}
 		return max(24, m.width/3)
 	}
 	return max(30, m.width*3/10)
 }
 
 func (m Model) conversationWidth() int {
-	if m.fullScreen || m.width < 60 {
+	// Single panel mode: take full width
+	if (m.fullScreen || m.width < 60) && m.focus == panelConversation {
 		return m.width
+	}
+	if m.fullScreen || m.width < 60 {
+		return 0
 	}
 	w := m.width - m.projectsWidth() - m.sessionsWidth()
 	if w < 30 {

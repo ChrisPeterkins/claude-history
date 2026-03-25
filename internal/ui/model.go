@@ -193,13 +193,25 @@ func (m Model) View() string {
 
 	var main string
 	if m.fullScreen || m.width < 60 {
-		// Full-screen or very narrow: only conversation panel
-		main = m.renderConversationPanel()
+		// Full-screen or very narrow: show whichever panel is focused
+		switch m.focus {
+		case panelProjects:
+			main = m.renderProjectsPanel()
+		case panelSessions:
+			main = m.renderSessionsPanel()
+		default:
+			main = m.renderConversationPanel()
+		}
 	} else if m.width < 100 {
-		// Medium width: hide projects, show sessions + conversation
-		sessionsPanel := m.renderSessionsPanel()
-		convoPanel := m.renderConversationPanel()
-		main = lipgloss.JoinHorizontal(lipgloss.Top, sessionsPanel, convoPanel)
+		// Medium width: show 2 panels — the focused one and its neighbor
+		switch m.focus {
+		case panelProjects:
+			main = lipgloss.JoinHorizontal(lipgloss.Top,
+				m.renderProjectsPanel(), m.renderSessionsPanel())
+		default:
+			main = lipgloss.JoinHorizontal(lipgloss.Top,
+				m.renderSessionsPanel(), m.renderConversationPanel())
+		}
 	} else {
 		// Wide: full three-panel layout
 		projectsPanel := m.renderProjectsPanel()
