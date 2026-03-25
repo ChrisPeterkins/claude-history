@@ -115,8 +115,10 @@ func (m Model) handleActionKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 
 	case " ":
 		if m.focus == panelConversation {
+			offset := m.viewport.YOffset
 			m.toggleCollapsibleAtCursor()
 			m.updateConversationContent()
+			m.viewport.SetYOffset(offset)
 			return m, nil, true
 		}
 
@@ -128,15 +130,19 @@ func (m Model) handleActionKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 
 	case "a":
 		if m.focus == panelConversation {
+			offset := m.viewport.YOffset
 			m.expandAll()
 			m.updateConversationContent()
+			m.viewport.SetYOffset(offset)
 			return m, nil, true
 		}
 
 	case "A":
 		if m.focus == panelConversation {
+			offset := m.viewport.YOffset
 			m.collapseAll()
 			m.updateConversationContent()
+			m.viewport.SetYOffset(offset)
 			return m, nil, true
 		}
 	}

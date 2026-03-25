@@ -255,7 +255,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewport, cmd = m.viewport.Update(msg)
 		// Re-render if scroll position changed (to update highlight)
 		if m.viewport.YOffset != prevOffset {
+			offset := m.viewport.YOffset
 			m.updateConversationContent()
+			m.viewport.SetYOffset(offset) // restore scroll after re-render
 		}
 		return m, cmd
 	}
