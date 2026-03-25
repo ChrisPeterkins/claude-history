@@ -47,14 +47,50 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.fullScreen {
 			return m, nil
 		}
-		m.focus = (m.focus + 1) % 3
+		switch m.visiblePanelCount() {
+		case 1:
+			// Single panel: tab does nothing, use enter/esc to slide
+		case 2:
+			// Two panels: tab toggles between the two visible panels
+			if m.focus == panelProjects {
+				m.focus = panelSessions
+			} else if m.focus == panelSessions {
+				// Determine which pair is visible
+				if m.width < 100 && m.isShowingProjectsSessions() {
+					m.focus = panelProjects
+				} else {
+					m.focus = panelConversation
+				}
+			} else {
+				m.focus = panelSessions
+			}
+		default:
+			m.focus = (m.focus + 1) % 3
+		}
 		return m, nil
 
 	case "shift+tab":
 		if m.fullScreen {
 			return m, nil
 		}
-		m.focus = (m.focus + 2) % 3
+		switch m.visiblePanelCount() {
+		case 1:
+			// Single panel: shift+tab does nothing
+		case 2:
+			if m.focus == panelConversation {
+				m.focus = panelSessions
+			} else if m.focus == panelSessions {
+				if m.width < 100 && !m.isShowingProjectsSessions() {
+					m.focus = panelConversation
+				} else {
+					m.focus = panelProjects
+				}
+			} else {
+				m.focus = panelSessions
+			}
+		default:
+			m.focus = (m.focus + 2) % 3
+		}
 		return m, nil
 
 	case "up", "k":
@@ -125,14 +161,17 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 
 	case "enter":
+		// Enter slides focus forward (and shifts visible panels in constrained layouts)
 		if m.focus < panelConversation {
 			m.focus++
+			m.rebuildRendererIfNeeded()
 		}
 		return m, nil
 
 	case "esc":
 		if m.fullScreen {
 			m.fullScreen = false
+			m.rebuildRenderer()
 			m.viewport.Width = m.conversationWidth() - 4
 			m.viewport.Height = m.contentHeight() - 3
 			if len(m.messages) > 0 {
@@ -140,8 +179,10 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		}
+		// Esc slides focus backward (and shifts visible panels in constrained layouts)
 		if m.focus > panelProjects {
 			m.focus--
+			m.rebuildRendererIfNeeded()
 		}
 		return m, nil
 
@@ -246,6 +287,36 @@ func (m *Model) toggleCollapsibleAtCursor() {
 		// Expand all
 		for k := range m.collapsed {
 			m.collapsed[k] = false
+		}
+	}
+}
+
+// visiblePanelCount returns how many panels are shown at the current width.
+func (m Model) visiblePanelCount() int {
+	if m.fullScreen || m.width < 60 {
+		return 1
+	}
+	if m.width < 100 {
+		return 2
+	}
+	return 3
+}
+
+// isShowingProjectsSessions returns true if the 2-panel view is showing projects+sessions
+// (as opposed to sessions+conversation).
+func (m Model) isShowingProjectsSessions() bool {
+	return m.focus == panelProjects
+}
+
+// rebuildRendererIfNeeded rebuilds the glamour renderer when the conversation panel
+// width has changed (e.g. because focus shifted which panels are visible).
+func (m *Model) rebuildRendererIfNeeded() {
+	if m.visiblePanelCount() < 3 {
+		m.rebuildRenderer()
+		m.viewport.Width = m.conversationWidth() - 4
+		m.viewport.Height = m.contentHeight() - 3
+		if len(m.messages) > 0 {
+			m.viewport.SetContent(m.renderConversation())
 		}
 	}
 }
