@@ -12,8 +12,6 @@ import (
 	"github.com/alecthomas/chroma/v2/formatters"
 	"github.com/alecthomas/chroma/v2/lexers"
 	"github.com/alecthomas/chroma/v2/styles"
-	"github.com/charmbracelet/lipgloss"
-
 	"github.com/chrispeterkins/claude-history/internal/data"
 )
 
@@ -155,20 +153,24 @@ func (m Model) renderThinkingBlock(block data.ContentBlock, msgUUID string, w in
 	highlighted := key == m.highlightKey
 
 	gutter := thinkingGutterStyle
-	headerStyle := thinkingHeaderStyle
 	if highlighted {
 		gutter = toolGutterExpandedStyle
-		headerStyle = lipgloss.NewStyle().
-			Foreground(colorBg).
-			Background(colorFgDim).
-			Bold(true)
 	}
 
 	if collapsed {
-		return gutter.Render(headerStyle.Render("▸ Thinking..."))
+		headerText := "▸ Thinking..."
+		if highlighted {
+			return gutter.Render(selectedItemStyle.Render(headerText))
+		}
+		return gutter.Render(thinkingHeaderStyle.Render(headerText))
 	}
 
-	header := headerStyle.Render("▾ Thinking")
+	var header string
+	if highlighted {
+		header = selectedItemStyle.Render("▾ Thinking")
+	} else {
+		header = thinkingHeaderStyle.Render("▾ Thinking")
+	}
 	text := block.Thinking
 	if text == "" {
 		text = "(redacted)"
@@ -192,16 +194,15 @@ func (m Model) renderToolCall(block data.ContentBlock, msg data.Message, w int) 
 		arrow = "▾"
 	}
 
-	hdrStyle := toolHeaderStyle
-	if highlighted {
-		hdrStyle = lipgloss.NewStyle().
-			Foreground(colorBg).
-			Background(colorWarm).
-			Bold(true)
-	}
+	headerContent := fmt.Sprintf("%s %s", arrow, toolBadgeStyle.Render(block.ToolName)) +
+		" " + summary
 
-	header := hdrStyle.Render(fmt.Sprintf("%s %s", arrow, toolBadgeStyle.Render(block.ToolName))) +
-		" " + hdrStyle.Render(summary)
+	var header string
+	if highlighted {
+		header = selectedItemStyle.Render(headerContent)
+	} else {
+		header = toolHeaderStyle.Render(headerContent)
+	}
 
 	if collapsed {
 		gutter := toolGutterCollapsedStyle

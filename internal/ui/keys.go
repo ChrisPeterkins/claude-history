@@ -371,19 +371,26 @@ func (m *Model) toggleCollapsibleAtCursor() {
 	}
 }
 
-// nearestCollapsibleKey returns the key of the collapsible section closest to the viewport center.
-// Uses exact line positions tracked during rendering.
+// nearestCollapsibleKey returns the key of the collapsible section closest to the
+// viewport center. Only considers sections currently visible in the viewport.
 func (m *Model) nearestCollapsibleKey() string {
 	if len(m.collapsibleLines) == 0 {
 		return ""
 	}
 
-	target := m.viewport.YOffset + m.viewport.Height/3
+	viewTop := m.viewport.YOffset
+	viewBottom := viewTop + m.viewport.Height
+	viewCenter := viewTop + m.viewport.Height/2
+
 	bestKey := ""
-	bestDist := int(^uint(0) >> 1) // max int
+	bestDist := int(^uint(0) >> 1)
 
 	for key, line := range m.collapsibleLines {
-		dist := target - line
+		// Only consider sections visible in the viewport
+		if line < viewTop-5 || line > viewBottom+5 {
+			continue
+		}
+		dist := viewCenter - line
 		if dist < 0 {
 			dist = -dist
 		}

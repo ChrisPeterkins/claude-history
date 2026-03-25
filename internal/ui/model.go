@@ -140,6 +140,9 @@ func (m *Model) rebuildRenderer() {
 
 // updateConversationContent re-renders the conversation and updates the viewport and line tracking.
 func (m *Model) updateConversationContent() {
+	// Update highlight before rendering so the renderer can use it
+	m.highlightKey = m.nearestCollapsibleKey()
+
 	result := m.renderConversation()
 	m.viewport.SetContent(result.content)
 	m.userMessageLines = result.userLines
@@ -247,12 +250,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// Update viewport if in conversation panel
 	if m.focus == panelConversation {
+		prevOffset := m.viewport.YOffset
 		var cmd tea.Cmd
 		m.viewport, cmd = m.viewport.Update(msg)
-		// Update highlight indicator based on scroll position
-		newKey := m.nearestCollapsibleKey()
-		if newKey != m.highlightKey {
-			m.highlightKey = newKey
+		// Re-render if scroll position changed (to update highlight)
+		if m.viewport.YOffset != prevOffset {
 			m.updateConversationContent()
 		}
 		return m, cmd
