@@ -86,9 +86,6 @@ type Model struct {
 	statusMessage string
 	statusExpiry  time.Time
 
-	// Transition effect
-	transitionUntil time.Time
-
 	// Version
 	version       string
 	updateAvail   string // non-empty if a newer version exists
@@ -291,10 +288,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case statusClearMsg:
 		m.statusMessage = ""
 		return m, nil
-
-	case transitionDoneMsg:
-		// Forces a re-render to clear the transition highlight
-		return m, nil
 	}
 
 	// Update viewport if in conversation panel
@@ -358,8 +351,6 @@ func (m Model) View() string {
 // statusClearMsg clears the flash message.
 type statusClearMsg struct{}
 
-// transitionDoneMsg signals that a panel transition animation has completed.
-type transitionDoneMsg struct{}
 
 func clearStatusAfter(d time.Duration) tea.Cmd {
 	return tea.Tick(d, func(time.Time) tea.Msg {

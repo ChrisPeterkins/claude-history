@@ -23,9 +23,6 @@ const (
 	// Help overlay
 	helpOverlayWidth = 44
 
-	// Panel transition duration (milliseconds)
-	transitionDurationMs = 150
-
 	// Session filter thresholds
 	filterLongMinMessages = 20
 	filterRecentDays      = 7

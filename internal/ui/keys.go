@@ -497,14 +497,6 @@ func (m *Model) rebuildRendererIfNeeded() {
 	}
 }
 
-// triggerTransition sets a brief highlight effect on the newly focused panel.
-func (m *Model) triggerTransition() tea.Cmd {
-	m.transitionUntil = time.Now().Add(time.Duration(transitionDurationMs) * time.Millisecond)
-	return tea.Tick(time.Duration(transitionDurationMs)*time.Millisecond, func(time.Time) tea.Msg {
-		return transitionDoneMsg{}
-	})
-}
-
 // loadMessagesWithSpinner saves scroll position, sets loading state, and loads messages.
 func (m *Model) loadMessagesWithSpinner() tea.Cmd {
 	if m.sessionCursor < len(m.sessions) {

@@ -321,9 +321,6 @@ func sessionStatsLine(s data.Session) string {
 
 // panelStyleFor returns the appropriate border style for a panel.
 func (m Model) panelStyleFor(panel int) lipgloss.Style {
-	if m.focus == panel && time.Now().Before(m.transitionUntil) {
-		return transitionPanelStyle
-	}
 	if m.focus == panel {
 		return activePanelStyle
 	}

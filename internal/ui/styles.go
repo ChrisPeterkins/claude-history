@@ -80,9 +80,6 @@ var (
 	// Date groups
 	dateGroupStyle lipgloss.Style
 
-	// Transition highlight
-	transitionPanelStyle lipgloss.Style
-
 	// Tool call gutters
 	toolGutterCollapsedStyle lipgloss.Style
 	toolGutterExpandedStyle  lipgloss.Style

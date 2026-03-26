@@ -216,8 +216,6 @@ func rebuildStyles() {
 	// --- Panels ---
 	panelStyle = panelBorderStyle(lipgloss.NormalBorder(), colorSubtle)
 	activePanelStyle = panelBorderStyle(lipgloss.RoundedBorder(), colorPrimary)
-	transitionPanelStyle = panelBorderStyle(lipgloss.RoundedBorder(), colorAccent)
-
 	panelTitleStyle = lipgloss.NewStyle().Bold(true).Foreground(colorPrimary).Padding(0, 1)
 	panelTitleActiveStyle = lipgloss.NewStyle().Bold(true).Foreground(colorBg).Background(colorPrimary).Padding(0, 1)
 
