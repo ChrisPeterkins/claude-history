@@ -38,6 +38,9 @@ func (m Model) renderConversation() renderResult {
 	}
 
 	w := m.conversationWidth() - conversationPadding
+	if w < 1 {
+		w = 1
+	}
 	var parts []string
 	var userLines []int
 	lineCount := 0
