@@ -9,3 +9,6 @@ claude-history
 .vscode/
 *.swp
 *.swo
+
+# Claude Code config (local development instructions)
+CLAUDE.md
