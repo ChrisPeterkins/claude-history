@@ -2,20 +2,22 @@ package ui
 
 import tea "github.com/charmbracelet/bubbletea"
 
+// panelItemOffset is the number of terminal lines from the top of the screen
+// to the first item inside a panel: header bar(1) + panel border(1) + title(1) = 3.
+// Adjust if the layout structure changes.
+const panelItemOffset = 3
+
 func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	x := msg.X
 	y := msg.Y
 
-	// Determine which panel was clicked
 	panel := m.panelAtX(x)
 
 	switch {
 	case msg.Button == tea.MouseButtonLeft && msg.Action == tea.MouseActionPress:
 		return m.handleMouseClick(panel, x, y)
-
 	case msg.Button == tea.MouseButtonWheelUp:
 		return m.handleMouseScroll(panel, -1)
-
 	case msg.Button == tea.MouseButtonWheelDown:
 		return m.handleMouseScroll(panel, 1)
 	}
@@ -28,7 +30,6 @@ func (m Model) panelAtX(x int) int {
 		return m.focus
 	}
 	if m.width < breakpointMedium {
-		// Two-panel mode
 		if m.focus == panelProjects {
 			if x < m.projectsWidth() {
 				return panelProjects
@@ -40,7 +41,6 @@ func (m Model) panelAtX(x int) int {
 		}
 		return panelConversation
 	}
-	// Three-panel mode
 	if x < m.projectsWidth() {
 		return panelProjects
 	}
@@ -52,9 +52,7 @@ func (m Model) panelAtX(x int) int {
 
 func (m Model) handleMouseClick(panel, x, y int) (tea.Model, tea.Cmd) {
 	m.focus = panel
-
-	// Y offset: header bar(1) + panel border(1) + panel title(1) = 3 lines before content
-	contentY := y - 3
+	contentY := y - panelItemOffset
 
 	switch panel {
 	case panelProjects:
@@ -73,7 +71,6 @@ func (m Model) handleMouseClick(panel, x, y int) (tea.Model, tea.Cmd) {
 		if contentY < 0 {
 			return m, nil
 		}
-		// Each session takes ~2 lines (date+stats, preview)
 		visibleStart, _ := m.visibleRange(m.sessionCursor, len(m.sessions), m.contentHeight()-2)
 		idx := visibleStart + contentY/2
 		if idx >= 0 && idx < len(m.sessions) && idx != m.sessionCursor {
@@ -82,9 +79,7 @@ func (m Model) handleMouseClick(panel, x, y int) (tea.Model, tea.Cmd) {
 		}
 
 	case panelConversation:
-		// Check if the clicked line is a collapsible section header
-		// y offset: header bar(1) + border(1) + panel title(1) = 3 lines before viewport content
-		clickedRelLine := y - 3
+		clickedRelLine := contentY
 		if clickedRelLine >= 0 {
 			clickedAbsLine := m.viewport.YOffset + clickedRelLine
 			for key, line := range m.collapsibleLines {
@@ -111,14 +106,12 @@ func (m Model) handleMouseScroll(panel, dir int) (tea.Model, tea.Cmd) {
 			m.sessionCursor = 0
 			return m, m.loadSessionsCmd()
 		}
-
 	case panelSessions:
 		newCursor := m.sessionCursor + dir
 		if newCursor >= 0 && newCursor < len(m.sessions) {
 			m.sessionCursor = newCursor
 			return m, m.loadMessagesWithSpinner()
 		}
-
 	case panelConversation:
 		if dir < 0 {
 			m.viewport.LineUp(3)
@@ -126,6 +119,5 @@ func (m Model) handleMouseScroll(panel, dir int) (tea.Model, tea.Cmd) {
 			m.viewport.LineDown(3)
 		}
 	}
-
 	return m, nil
 }
