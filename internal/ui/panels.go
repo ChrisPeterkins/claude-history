@@ -32,6 +32,12 @@ func (m Model) renderProjectsPanel() string {
 	var items []string
 	items = append(items, title)
 
+	if len(m.projects) == 0 {
+		noData := "\n" + emptyStyle.Width(w-4).Render("No Claude Code\nhistory found.") +
+			"\n\n" + timestampStyle.Render("  Start a conversation\n  with Claude Code to\n  see it here.")
+		items = append(items, noData)
+	}
+
 	visibleStart, visibleEnd := m.visibleRange(m.projectCursor, len(m.projects), h-2)
 	for i := visibleStart; i < visibleEnd; i++ {
 		p := m.projects[i]
