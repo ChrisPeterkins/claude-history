@@ -111,6 +111,6 @@ func load() Config {
 		return Config{} // no config file is fine
 	}
 	var c Config
-	json.Unmarshal(data, &c) // ignore parse errors, use defaults
+	_ = json.Unmarshal(data, &c) // parse errors are non-fatal; use defaults
 	return c
 }

@@ -90,13 +90,6 @@ type ToolInteraction struct {
 	Name   string
 }
 
-// SubagentInfo describes a subagent conversation.
-type SubagentInfo struct {
-	AgentID  string
-	FilePath string
-	Messages []Message // loaded lazily
-}
-
 // HistoryEntry represents a line from history.jsonl.
 type HistoryEntry struct {
 	Display   string `json:"display"`

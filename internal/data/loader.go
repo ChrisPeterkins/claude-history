@@ -337,7 +337,7 @@ func parseMessage(line []byte) *Message {
 
 	var msgType string
 	if t, ok := raw["type"]; ok {
-		json.Unmarshal(t, &msgType) //nolint: field-level errors are non-fatal
+		json.Unmarshal(t, &msgType)
 	}
 
 	switch msgType {

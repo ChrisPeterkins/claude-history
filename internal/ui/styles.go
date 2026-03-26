@@ -37,8 +37,6 @@ var (
 	dimItemStyle             lipgloss.Style
 	dimSelectedItemStyle     lipgloss.Style
 	dimItemDescStyle         lipgloss.Style
-	dimSelectedItemDescStyle lipgloss.Style
-
 	// Conversation
 	userBubbleStyle      lipgloss.Style
 	userLabelStyle       lipgloss.Style
@@ -72,8 +70,6 @@ var (
 	// Diffs
 	diffAddStyle    lipgloss.Style
 	diffRemoveStyle lipgloss.Style
-	diffHeaderStyle lipgloss.Style
-
 	// Thinking blocks
 	thinkingHeaderStyle lipgloss.Style
 	thinkingBodyStyle   lipgloss.Style
@@ -81,8 +77,7 @@ var (
 	// System messages
 	systemMessageStyle lipgloss.Style
 
-	// Session stats and date groups
-	statsStyle     lipgloss.Style
+	// Date groups
 	dateGroupStyle lipgloss.Style
 
 	// Transition highlight

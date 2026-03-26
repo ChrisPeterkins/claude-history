@@ -231,7 +231,6 @@ func rebuildStyles() {
 	dimItemStyle = lipgloss.NewStyle().Foreground(colorSubtle).PaddingLeft(2)
 	dimItemDescStyle = lipgloss.NewStyle().Foreground(colorSubtle).PaddingLeft(2)
 	dimSelectedItemStyle = leftBorderStyle(colorSubtle).Foreground(colorFgDim)
-	dimSelectedItemDescStyle = lipgloss.NewStyle().Foreground(colorSubtle).PaddingLeft(2)
 
 	// --- Conversation ---
 	userBubbleStyle = lipgloss.NewStyle().
@@ -336,10 +335,6 @@ func rebuildStyles() {
 
 	diffRemoveStyle = lipgloss.NewStyle().
 		Foreground(colorRed)
-
-	diffHeaderStyle = lipgloss.NewStyle().
-		Foreground(colorFgDim).
-		Bold(true)
 
 	// --- Thinking ---
 	thinkingHeaderStyle = lipgloss.NewStyle().
