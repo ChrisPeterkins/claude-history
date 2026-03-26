@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 
@@ -72,9 +73,25 @@ func exportMarkdown(messages []data.Message) string {
 	return sb.String()
 }
 
-// copyToClipboard copies text to the system clipboard using pbcopy (macOS).
+// copyToClipboard copies text to the system clipboard.
+// Supports macOS (pbcopy), Linux (xclip/xsel), and Windows (clip.exe).
 func copyToClipboard(text string) error {
-	cmd := exec.Command("pbcopy")
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "darwin":
+		cmd = exec.Command("pbcopy")
+	case "linux":
+		// Try xclip first, fall back to xsel
+		if _, err := exec.LookPath("xclip"); err == nil {
+			cmd = exec.Command("xclip", "-selection", "clipboard")
+		} else {
+			cmd = exec.Command("xsel", "--clipboard", "--input")
+		}
+	case "windows":
+		cmd = exec.Command("clip.exe")
+	default:
+		return fmt.Errorf("clipboard not supported on %s", runtime.GOOS)
+	}
 	cmd.Stdin = strings.NewReader(text)
 	return cmd.Run()
 }
