@@ -16,12 +16,31 @@ type Config struct {
 	ProjectRoots []string `json:"projectRoots,omitempty"`
 
 	// Theme is the name of the color theme to use on startup.
-	// One of: nord, dracula, catppuccin, light
+	// Built-in: nord, dracula, catppuccin, light, solarized, gruvbox, tokyo-night, high-contrast
 	Theme string `json:"theme,omitempty"`
 
 	// DefaultFilter is the session filter applied on startup.
 	// One of: all, code, long, recent
 	DefaultFilter string `json:"defaultFilter,omitempty"`
+
+	// CustomTheme defines a user-created color theme.
+	// If set and Theme is "custom", this palette is used.
+	CustomTheme *CustomTheme `json:"customTheme,omitempty"`
+}
+
+// CustomTheme defines a user-created color palette via hex color strings.
+type CustomTheme struct {
+	Primary    string `json:"primary,omitempty"`    // Main accent (selected panels, titles)
+	Secondary  string `json:"secondary,omitempty"`  // Interactive elements (user messages, links)
+	Accent     string `json:"accent,omitempty"`     // Highlights (transitions, search matches)
+	Warm       string `json:"warm,omitempty"`       // Warnings, tool badges default
+	Fg         string `json:"fg,omitempty"`         // Main text
+	FgDim      string `json:"fgDim,omitempty"`      // Dimmed text, timestamps
+	Bg         string `json:"bg,omitempty"`          // Background
+	BgSelected string `json:"bgSelected,omitempty"` // Selected item background
+	Border     string `json:"border,omitempty"`      // Panel borders
+	Red        string `json:"red,omitempty"`         // Errors, diff removed
+	Green      string `json:"green,omitempty"`       // Success, diff added
 }
 
 // DefaultProjectRoots are used when no config file exists or projectRoots is empty.

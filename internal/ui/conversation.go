@@ -401,11 +401,8 @@ func toolBadge(name string) string {
 	if !ok {
 		bg = colorWarm
 	}
-	style := lipgloss.NewStyle().
-		Foreground(colorBg).
-		Background(bg).
-		Bold(true).
-		Padding(0, 1)
+	// Use the theme's badge style but override the background color per-tool
+	style := toolBadgeStyle.Background(bg)
 	return style.Render(name)
 }
 

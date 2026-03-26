@@ -1,6 +1,10 @@
 package ui
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"github.com/charmbracelet/lipgloss"
+
+	"github.com/chrispeterkins/claude-history/internal/config"
+)
 
 // Theme defines a color palette for the TUI.
 type Theme struct {
@@ -22,10 +26,10 @@ type Theme struct {
 var themes = []Theme{
 	{
 		Name:       "Nord",
-		Primary:    lipgloss.Color("#B48EAD"),
-		Secondary:  lipgloss.Color("#88C0D0"),
-		Accent:     lipgloss.Color("#A3BE8C"),
-		Warm:       lipgloss.Color("#EBCB8B"),
+		Primary:    lipgloss.Color("#B48EAD"), // purple
+		Secondary:  lipgloss.Color("#88C0D0"), // frost blue
+		Accent:     lipgloss.Color("#5E81AC"), // steel blue (distinct from green)
+		Warm:       lipgloss.Color("#EBCB8B"), // yellow
 		Subtle:     lipgloss.Color("#4C566A"),
 		Fg:         lipgloss.Color("#ECEFF4"),
 		FgDim:      lipgloss.Color("#8891A5"),
@@ -37,10 +41,10 @@ var themes = []Theme{
 	},
 	{
 		Name:       "Dracula",
-		Primary:    lipgloss.Color("#BD93F9"),
-		Secondary:  lipgloss.Color("#8BE9FD"),
-		Accent:     lipgloss.Color("#50FA7B"),
-		Warm:       lipgloss.Color("#F1FA8C"),
+		Primary:    lipgloss.Color("#BD93F9"), // purple
+		Secondary:  lipgloss.Color("#8BE9FD"), // cyan
+		Accent:     lipgloss.Color("#FFB86C"), // orange (distinct from green)
+		Warm:       lipgloss.Color("#F1FA8C"), // yellow
 		Subtle:     lipgloss.Color("#44475A"),
 		Fg:         lipgloss.Color("#F8F8F2"),
 		FgDim:      lipgloss.Color("#6272A4"),
@@ -52,10 +56,10 @@ var themes = []Theme{
 	},
 	{
 		Name:       "Catppuccin",
-		Primary:    lipgloss.Color("#CBA6F7"),
-		Secondary:  lipgloss.Color("#89DCEB"),
-		Accent:     lipgloss.Color("#A6E3A1"),
-		Warm:       lipgloss.Color("#F9E2AF"),
+		Primary:    lipgloss.Color("#CBA6F7"), // mauve
+		Secondary:  lipgloss.Color("#89DCEB"), // sky
+		Accent:     lipgloss.Color("#F5C2E7"), // pink (distinct from green)
+		Warm:       lipgloss.Color("#F9E2AF"), // yellow
 		Subtle:     lipgloss.Color("#45475A"),
 		Fg:         lipgloss.Color("#CDD6F4"),
 		FgDim:      lipgloss.Color("#7F849C"),
@@ -67,23 +71,113 @@ var themes = []Theme{
 	},
 	{
 		Name:       "Light",
-		Primary:    lipgloss.Color("#7C3AED"),
-		Secondary:  lipgloss.Color("#0284C7"),
-		Accent:     lipgloss.Color("#16A34A"),
-		Warm:       lipgloss.Color("#CA8A04"),
-		Subtle:     lipgloss.Color("#D1D5DB"),
-		Fg:         lipgloss.Color("#1F2937"),
-		FgDim:      lipgloss.Color("#6B7280"),
+		Primary:    lipgloss.Color("#7C3AED"), // violet
+		Secondary:  lipgloss.Color("#0369A1"), // darker blue for contrast
+		Accent:     lipgloss.Color("#9333EA"), // purple (distinct from green)
+		Warm:       lipgloss.Color("#B45309"), // darker amber for contrast
+		Subtle:     lipgloss.Color("#9CA3AF"), // darker gray for visibility
+		Fg:         lipgloss.Color("#111827"), // near-black text
+		FgDim:      lipgloss.Color("#4B5563"), // darker dim text
 		Bg:         lipgloss.Color("#FFFFFF"),
-		BgSelected: lipgloss.Color("#F3F4F6"),
-		Border:     lipgloss.Color("#D1D5DB"),
+		BgSelected: lipgloss.Color("#E5E7EB"), // stronger selection contrast
+		Border:     lipgloss.Color("#9CA3AF"), // darker border
 		Red:        lipgloss.Color("#DC2626"),
-		Green:      lipgloss.Color("#16A34A"),
+		Green:      lipgloss.Color("#15803D"), // darker green for contrast on white
+	},
+	{
+		Name:       "Solarized",
+		Primary:    lipgloss.Color("#268BD2"), // blue
+		Secondary:  lipgloss.Color("#2AA198"), // cyan
+		Accent:     lipgloss.Color("#6C71C4"), // violet
+		Warm:       lipgloss.Color("#B58900"), // yellow
+		Subtle:     lipgloss.Color("#073642"), // base02
+		Fg:         lipgloss.Color("#839496"), // base0
+		FgDim:      lipgloss.Color("#586E75"), // base01
+		Bg:         lipgloss.Color("#002B36"), // base03
+		BgSelected: lipgloss.Color("#073642"), // base02
+		Border:     lipgloss.Color("#586E75"), // base01
+		Red:        lipgloss.Color("#DC322F"),
+		Green:      lipgloss.Color("#859900"),
+	},
+	{
+		Name:       "Gruvbox",
+		Primary:    lipgloss.Color("#D3869B"), // purple
+		Secondary:  lipgloss.Color("#83A598"), // aqua
+		Accent:     lipgloss.Color("#FE8019"), // orange
+		Warm:       lipgloss.Color("#FABD2F"), // yellow
+		Subtle:     lipgloss.Color("#3C3836"), // bg1
+		Fg:         lipgloss.Color("#EBDBB2"), // fg
+		FgDim:      lipgloss.Color("#928374"), // gray
+		Bg:         lipgloss.Color("#282828"), // bg
+		BgSelected: lipgloss.Color("#3C3836"), // bg1
+		Border:     lipgloss.Color("#504945"), // bg2
+		Red:        lipgloss.Color("#FB4934"),
+		Green:      lipgloss.Color("#B8BB26"),
+	},
+	{
+		Name:       "Tokyo Night",
+		Primary:    lipgloss.Color("#BB9AF7"), // purple
+		Secondary:  lipgloss.Color("#7AA2F7"), // blue
+		Accent:     lipgloss.Color("#FF9E64"), // orange
+		Warm:       lipgloss.Color("#E0AF68"), // yellow
+		Subtle:     lipgloss.Color("#292E42"), // bg highlight
+		Fg:         lipgloss.Color("#C0CAF5"), // fg
+		FgDim:      lipgloss.Color("#565F89"), // comment
+		Bg:         lipgloss.Color("#1A1B26"), // bg
+		BgSelected: lipgloss.Color("#292E42"), // bg highlight
+		Border:     lipgloss.Color("#3B4261"), // border
+		Red:        lipgloss.Color("#F7768E"),
+		Green:      lipgloss.Color("#9ECE6A"),
+	},
+	{
+		Name:       "High Contrast",
+		Primary:    lipgloss.Color("#FFFF00"), // bright yellow
+		Secondary:  lipgloss.Color("#00FFFF"), // bright cyan
+		Accent:     lipgloss.Color("#FF00FF"), // magenta
+		Warm:       lipgloss.Color("#FFAA00"), // orange
+		Subtle:     lipgloss.Color("#333333"),
+		Fg:         lipgloss.Color("#FFFFFF"), // pure white
+		FgDim:      lipgloss.Color("#AAAAAA"),
+		Bg:         lipgloss.Color("#000000"), // pure black
+		BgSelected: lipgloss.Color("#333333"),
+		Border:     lipgloss.Color("#666666"),
+		Red:        lipgloss.Color("#FF0000"),
+		Green:      lipgloss.Color("#00FF00"),
 	},
 }
 
 func init() {
 	applyTheme(themes[0]) // Default to Nord theme
+}
+
+// buildCustomTheme creates a Theme from user-provided config hex colors.
+// Missing colors fall back to Nord defaults.
+func buildCustomTheme(ct *config.CustomTheme) Theme {
+	nord := themes[0] // Nord as fallback
+	t := Theme{Name: "Custom"}
+
+	t.Primary = colorOrDefault(ct.Primary, nord.Primary)
+	t.Secondary = colorOrDefault(ct.Secondary, nord.Secondary)
+	t.Accent = colorOrDefault(ct.Accent, nord.Accent)
+	t.Warm = colorOrDefault(ct.Warm, nord.Warm)
+	t.Fg = colorOrDefault(ct.Fg, nord.Fg)
+	t.FgDim = colorOrDefault(ct.FgDim, nord.FgDim)
+	t.Bg = colorOrDefault(ct.Bg, nord.Bg)
+	t.BgSelected = colorOrDefault(ct.BgSelected, nord.BgSelected)
+	t.Border = colorOrDefault(ct.Border, nord.Border)
+	t.Red = colorOrDefault(ct.Red, nord.Red)
+	t.Green = colorOrDefault(ct.Green, nord.Green)
+	// Subtle is derived from Border if not in the custom palette
+	t.Subtle = t.Border
+
+	return t
+}
+
+func colorOrDefault(hex string, fallback lipgloss.Color) lipgloss.Color {
+	if hex != "" {
+		return lipgloss.Color(hex)
+	}
+	return fallback
 }
 
 // applyTheme updates all style variables to use the given theme's colors.
@@ -99,6 +193,7 @@ func applyTheme(t Theme) {
 	colorBgSelected = t.BgSelected
 	colorBorder = t.Border
 	colorRed = t.Red
+	colorGreen = t.Green
 
 	rebuildStyles()
 }
@@ -211,13 +306,13 @@ func rebuildStyles() {
 
 	// Per-tool badge colors
 	toolBadgeColors = map[string]lipgloss.Color{
-		"Bash":  colorAccent,    // green
-		"Edit":  colorWarm,      // yellow
-		"Write": colorSecondary, // blue
-		"Read":  colorFgDim,     // dim/cyan
-		"Grep":  colorPrimary,   // purple
-		"Glob":  colorPrimary,   // purple
-		"Agent": colorRed,       // red/pink
+		"Bash":  colorGreen,
+		"Edit":  colorWarm,
+		"Write": colorSecondary,
+		"Read":  colorFgDim,
+		"Grep":  colorPrimary,
+		"Glob":  colorPrimary,
+		"Agent": colorRed,
 	}
 
 	timestampStyle = lipgloss.NewStyle().

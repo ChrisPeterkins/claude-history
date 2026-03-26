@@ -83,7 +83,8 @@ Settings are stored in `~/.claude-history.json` and created automatically when y
 | Field | Description | Default |
 |-------|-------------|---------|
 | `projectRoots` | Directory names that contain your projects. Used to extract friendly project names from paths. | Common names: Projects, code, dev, src, repos, workspace |
-| `theme` | Color theme on startup. One of: `nord`, `dracula`, `catppuccin`, `light` | `nord` |
+| `theme` | Color theme on startup. One of: `nord`, `dracula`, `catppuccin`, `light`, `solarized`, `gruvbox`, `tokyo-night`, `high-contrast`, `custom` | `nord` |
+| `customTheme` | Custom color palette (used when theme is `"custom"`). See below. | — |
 | `defaultFilter` | Session filter on startup. One of: `all`, `code`, `long`, `recent` | `all` |
 
 ## How it works
@@ -103,6 +104,35 @@ Switch themes with `t`. Your choice is saved automatically.
 - **Dracula** — Dark with vibrant colors
 - **Catppuccin** — Muted pastels on dark background
 - **Light** — Light background for bright environments
+- **Solarized** — Ethan Schoonover's precision dark palette
+- **Gruvbox** — Retro warm tones
+- **Tokyo Night** — Modern dark with vivid accents
+- **High Contrast** — Maximum contrast for accessibility
+
+### Custom Theme
+
+Create your own palette in `~/.claude-history.json`:
+
+```json
+{
+  "theme": "custom",
+  "customTheme": {
+    "primary": "#FF6B6B",
+    "secondary": "#4ECDC4",
+    "accent": "#45B7D1",
+    "warm": "#F7DC6F",
+    "fg": "#EEEEEE",
+    "fgDim": "#888888",
+    "bg": "#1A1A2E",
+    "bgSelected": "#2A2A4E",
+    "border": "#444466",
+    "red": "#FF4444",
+    "green": "#44FF44"
+  }
+}
+```
+
+Any missing colors fall back to Nord defaults.
 
 ## Built with
 

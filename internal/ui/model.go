@@ -128,7 +128,13 @@ func NewModel(version string) Model {
 	// Load saved theme preference
 	themeIdx := 0
 	cfg := config.Get()
-	if cfg.Theme != "" {
+	if strings.EqualFold(cfg.Theme, "custom") && cfg.CustomTheme != nil {
+		// Apply custom theme from config
+		custom := buildCustomTheme(cfg.CustomTheme)
+		themes = append(themes, custom)
+		themeIdx = len(themes) - 1
+		applyTheme(custom)
+	} else if cfg.Theme != "" {
 		for i, t := range themes {
 			if strings.EqualFold(t.Name, cfg.Theme) {
 				themeIdx = i

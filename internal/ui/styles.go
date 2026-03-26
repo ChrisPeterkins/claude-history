@@ -15,6 +15,7 @@ var (
 	colorBgSelected lipgloss.Color
 	colorBorder     lipgloss.Color
 	colorRed        lipgloss.Color
+	colorGreen      lipgloss.Color
 )
 
 // All styles are built by rebuildStyles() in theme.go.
