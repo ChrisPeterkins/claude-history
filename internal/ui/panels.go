@@ -53,20 +53,26 @@ func (m Model) renderProjectsPanel() string {
 		if p.HistoryOnly {
 			suffix += " ○"
 		}
-		name := truncateStr(p.Name, w-8)
+		// Truncate name to fit panel width (accounting for suffix, padding, border)
+		suffixWidth := lipgloss.Width(suffix)
+		maxNameWidth := w - 6 - suffixWidth // panel padding(4) + item border/padding(2)
+		if maxNameWidth < 4 {
+			maxNameWidth = 4
+		}
+		name := truncateStr(p.Name, maxNameWidth)
 		focused := m.focus == panelProjects
 		if i == m.projectCursor {
 			style := selectedItemStyle
 			if !focused {
 				style = dimSelectedItemStyle
 			}
-			items = append(items, style.Width(w-4).Render(name+suffix))
+			items = append(items, style.Width(w-4).MaxWidth(w-4).Render(name+suffix))
 		} else {
 			style := itemStyle
 			if !focused {
 				style = dimItemStyle
 			}
-			items = append(items, style.Width(w-4).Render(name+suffix))
+			items = append(items, style.Width(w-4).MaxWidth(w-4).Render(name+suffix))
 		}
 	}
 
