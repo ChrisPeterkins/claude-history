@@ -3,9 +3,9 @@ package ui
 import tea "github.com/charmbracelet/bubbletea"
 
 // panelItemOffset is the number of terminal lines from the top of the screen
-// to the first item inside a panel: header bar(1) + panel border(1) + title(1) = 3.
+// to the first item inside a panel: header bar(1) + panel border(1) + padding(1) + title(1) = 4.
 // Adjust if the layout structure changes.
-const panelItemOffset = 3
+const panelItemOffset = 4
 
 func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	x := msg.X
