@@ -47,6 +47,7 @@ func (m Model) renderHelpOverlay() string {
 			title: "Search & Export",
 			keys: []struct{ key, desc string }{
 				{"/", "Search conversations"},
+				{"Ctrl+F", "Find in conversation"},
 				{"y", "Copy conversation to clipboard"},
 			},
 		},

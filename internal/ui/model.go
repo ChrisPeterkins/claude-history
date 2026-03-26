@@ -70,6 +70,12 @@ type Model struct {
 	awaitingMark     markMode
 	pendingMarkOffset int // offset to restore after cross-session mark jump, -1 = none
 
+	// In-conversation search
+	convSearchMode    bool
+	convSearchInput   textinput.Model
+	convSearchMatches []int // line numbers with matches
+	convSearchIdx     int   // current match index
+
 	// Session filter
 	sessionFilter int // index into sessionFilterTypes
 
@@ -104,6 +110,10 @@ func NewModel() Model {
 	ti.Placeholder = "Search conversations..."
 	ti.CharLimit = searchCharLimit
 
+	csi := textinput.New()
+	csi.Placeholder = "Find in conversation..."
+	csi.CharLimit = searchCharLimit
+
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#88C0D0"))
@@ -115,6 +125,7 @@ func NewModel() Model {
 		spinner:         s,
 		scrollPositions: make(map[string]int),
 		marks:             make(map[rune]markPosition),
+		convSearchInput:   csi,
 		pendingMarkOffset: -1,
 	}
 }

@@ -35,10 +35,14 @@ func (m Model) renderProjectsPanel() string {
 	visibleStart, visibleEnd := m.visibleRange(m.projectCursor, len(m.projects), h-2)
 	for i := visibleStart; i < visibleEnd; i++ {
 		p := m.projects[i]
-		// Build suffix with session count and history indicator
+		// Build suffix with activity dot, session count, and history indicator
+		dot := activityDot(p.LastActive)
 		suffix := ""
+		if dot != "" {
+			suffix = " " + dot
+		}
 		if p.SessionCount > 0 {
-			suffix = tokenStyle.Render(fmt.Sprintf(" (%d)", p.SessionCount))
+			suffix += tokenStyle.Render(fmt.Sprintf(" (%d)", p.SessionCount))
 		}
 		if p.HistoryOnly {
 			suffix += " ○"
@@ -153,9 +157,17 @@ func (m Model) renderConversationPanel() string {
 	w := m.conversationWidth()
 	h := m.contentHeight()
 
-	title := panelTitleStyle.Render("Conversation")
-	if m.focus == panelConversation {
+	var title string
+	if m.convSearchMode {
+		matchInfo := ""
+		if len(m.convSearchMatches) > 0 {
+			matchInfo = fmt.Sprintf(" %d/%d", m.convSearchIdx+1, len(m.convSearchMatches))
+		}
+		title = panelTitleActiveStyle.Render(" Find"+matchInfo+" ") + " " + m.convSearchInput.View()
+	} else if m.focus == panelConversation {
 		title = panelTitleActiveStyle.Render(" Conversation ")
+	} else {
+		title = panelTitleStyle.Render("Conversation")
 	}
 
 	scrollInfo := ""
@@ -172,6 +184,20 @@ func (m Model) renderConversationPanel() string {
 	var body string
 	if m.loading {
 		body = "\n\n" + emptyStyle.Width(w-6).Render(m.spinner.View()+" Loading session...")
+	} else if m.focus != panelConversation && len(m.messages) == 0 && m.sessionCursor < len(m.sessions) {
+		// Session peek: show preview when browsing sessions
+		s := m.sessions[m.sessionCursor]
+		peek := "\n\n" + timestampStyle.Render("  Preview") + "\n\n"
+		if s.Preview != "" {
+			preview := s.Preview
+			if len(preview) > 300 {
+				preview = preview[:297] + "..."
+			}
+			peek += emptyStyle.Width(w - 6).Render(preview)
+		}
+		peek += "\n\n" + tokenStyle.Render("  "+sessionStatsLine(s))
+		peek += "\n\n" + timestampStyle.Render("  press enter to load full conversation")
+		body = peek
 	} else {
 		body = m.applyLineHighlight(m.viewport.View(), w-6)
 	}
@@ -350,20 +376,42 @@ func (m Model) applyLineHighlight(viewOutput string, maxWidth int) string {
 		return viewOutput
 	}
 
-	// Find which collapsible section space would target
+	lines := strings.Split(viewOutput, "\n")
+
+	// Highlight search matches if in conv search mode
+	if m.convSearchMode && len(m.convSearchMatches) > 0 {
+		matchSet := make(map[int]bool)
+		for _, absLine := range m.convSearchMatches {
+			rel := absLine - m.viewport.YOffset
+			matchSet[rel] = true
+		}
+		// Highlight current match differently
+		currentRel := -1
+		if m.convSearchIdx < len(m.convSearchMatches) {
+			currentRel = m.convSearchMatches[m.convSearchIdx] - m.viewport.YOffset
+		}
+		for i := range lines {
+			if i == currentRel {
+				lines[i] = selectedItemStyle.Width(maxWidth).Render(strings.TrimRight(lines[i], " "))
+			} else if matchSet[i] {
+				lines[i] = dimSelectedItemStyle.Width(maxWidth).Render(strings.TrimRight(lines[i], " "))
+			}
+		}
+		return strings.Join(lines, "\n")
+	}
+
+	// Normal mode: highlight nearest collapsible section
 	key := m.nearestCollapsibleKey()
 	if key == "" {
 		return viewOutput
 	}
 
-	// Get the absolute line of that section and convert to viewport-relative
 	absLine, ok := m.collapsibleLines[key]
 	if !ok {
 		return viewOutput
 	}
 	relativeLine := absLine - m.viewport.YOffset
 
-	lines := strings.Split(viewOutput, "\n")
 	if relativeLine < 0 || relativeLine >= len(lines) {
 		return viewOutput
 	}
@@ -373,6 +421,22 @@ func (m Model) applyLineHighlight(viewOutput string, maxWidth int) string {
 	)
 
 	return strings.Join(lines, "\n")
+}
+
+// activityDot returns a colored dot indicating project recency.
+func activityDot(lastActive time.Time) string {
+	if lastActive.IsZero() {
+		return ""
+	}
+	age := time.Since(lastActive)
+	switch {
+	case age < 7*24*time.Hour:
+		return lipgloss.NewStyle().Foreground(colorAccent).Render("●") // green - active this week
+	case age < 30*24*time.Hour:
+		return lipgloss.NewStyle().Foreground(colorWarm).Render("●") // yellow - active this month
+	default:
+		return lipgloss.NewStyle().Foreground(colorSubtle).Render("○") // dim - older
+	}
 }
 
 // filterSessions applies the current session filter.

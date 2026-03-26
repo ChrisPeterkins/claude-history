@@ -43,8 +43,9 @@ func LoadProjects() ([]Project, error) {
 			realPath = decodeDirToPath(dirName)
 		}
 
-		// Count session files
+		// Count session files and find most recent
 		sessionCount := 0
+		var lastActive time.Time
 		subEntries, err := os.ReadDir(filepath.Join(projectsDir, dirName))
 		if err != nil {
 			continue
@@ -52,6 +53,11 @@ func LoadProjects() ([]Project, error) {
 		for _, se := range subEntries {
 			if !se.IsDir() && strings.HasSuffix(se.Name(), ".jsonl") {
 				sessionCount++
+				if info, err := se.Info(); err == nil {
+					if info.ModTime().After(lastActive) {
+						lastActive = info.ModTime()
+					}
+				}
 			}
 		}
 
@@ -60,6 +66,7 @@ func LoadProjects() ([]Project, error) {
 			Path:         realPath,
 			DirName:      dirName,
 			SessionCount: sessionCount,
+			LastActive:   lastActive,
 		}
 		projects = append(projects, p)
 	}

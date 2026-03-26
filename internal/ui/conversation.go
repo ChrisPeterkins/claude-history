@@ -12,6 +12,8 @@ import (
 	"github.com/alecthomas/chroma/v2/formatters"
 	"github.com/alecthomas/chroma/v2/lexers"
 	"github.com/alecthomas/chroma/v2/styles"
+	"github.com/charmbracelet/lipgloss"
+
 	"github.com/chrispeterkins/claude-history/internal/data"
 )
 
@@ -23,10 +25,21 @@ type renderResult struct {
 
 func (m Model) renderConversation() renderResult {
 	if len(m.messages) == 0 {
-		empty := "\n\n\n" +
-			emptyLogoStyle.Render("◈") + "\n\n" +
-			emptyStyle.Render("Select a session\nto view the conversation") + "\n\n" +
-			timestampStyle.Render("↑/↓ navigate · enter to select")
+		w := m.conversationWidth() - conversationPadding
+		boxContent := logoStyle.Render("◈  Claude History") + "\n\n" +
+			emptyStyle.Render("Browse your Claude\nCode conversations")
+		box := lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(colorPrimary).
+			Padding(1, 3).
+			Align(lipgloss.Center).
+			Width(min(36, w)).
+			Render(boxContent)
+		hints := helpKeyStyle.Render("↑/↓") + " " + helpDescStyle.Render("navigate") +
+			"  " + helpKeyStyle.Render("enter") + " " + helpDescStyle.Render("select") +
+			"  " + helpKeyStyle.Render("?") + " " + helpDescStyle.Render("help")
+		empty := "\n\n" + lipgloss.PlaceHorizontal(w, lipgloss.Center, box) +
+			"\n\n" + lipgloss.PlaceHorizontal(w, lipgloss.Center, hints)
 		return renderResult{content: empty}
 	}
 
@@ -43,8 +56,18 @@ func (m Model) renderConversation() renderResult {
 	}
 
 	hasRendered := false
+	var lastTimestamp time.Time
 	for _, msg := range m.messages {
 		var rendered string
+
+		// Insert time gap indicator if significant time passed
+		if hasRendered && !msg.Timestamp.IsZero() && !lastTimestamp.IsZero() {
+			gap := msg.Timestamp.Sub(lastTimestamp)
+			if gapStr := formatTimeGap(gap, w); gapStr != "" {
+				parts = append(parts, gapStr)
+				lineCount += 2
+			}
+		}
 
 		switch msg.Type {
 		case "user":
@@ -69,6 +92,9 @@ func (m Model) renderConversation() renderResult {
 			parts = append(parts, rendered)
 			lineCount += strings.Count(rendered, "\n") + 2
 			hasRendered = true
+			if !msg.Timestamp.IsZero() {
+				lastTimestamp = msg.Timestamp
+			}
 		}
 	}
 
@@ -209,7 +235,7 @@ func (m Model) renderToolCall(block data.ContentBlock, msg data.Message, w int) 
 		arrow = "▾"
 	}
 
-	header := toolHeaderStyle.Render(fmt.Sprintf("%s %s", arrow, toolBadgeStyle.Render(block.ToolName))) +
+	header := toolHeaderStyle.Render(fmt.Sprintf("%s %s", arrow, toolBadge(block.ToolName))) +
 		" " + toolHeaderStyle.Render(summary)
 
 	if collapsed {
@@ -304,7 +330,44 @@ func (m Model) renderConversationStats(w int) string {
 		return ""
 	}
 
-	return tokenStyle.Render("  " + strings.Join(statParts, " · "))
+	result := tokenStyle.Render("  " + strings.Join(statParts, " · "))
+
+	// Add file change summary
+	fileNames := m.collectChangedFiles()
+	if len(fileNames) > 0 {
+		var fileStr string
+		if len(fileNames) <= 3 {
+			fileStr = strings.Join(fileNames, ", ")
+		} else {
+			fileStr = strings.Join(fileNames[:3], ", ") + fmt.Sprintf(" (+%d more)", len(fileNames)-3)
+		}
+		result += "\n" + tokenStyle.Render("  "+fileStr)
+	}
+
+	return result
+}
+
+// collectChangedFiles extracts unique file names from Edit/Write tool calls.
+func (m Model) collectChangedFiles() []string {
+	seen := make(map[string]bool)
+	var names []string
+	for _, msg := range m.messages {
+		for _, pair := range msg.ToolPairs {
+			if pair.Name != "Edit" && pair.Name != "Write" {
+				continue
+			}
+			if path, ok := pair.Use.Input["file_path"].(string); ok {
+				// Use just the filename
+				parts := strings.Split(path, "/")
+				name := parts[len(parts)-1]
+				if !seen[name] {
+					seen[name] = true
+					names = append(names, name)
+				}
+			}
+		}
+	}
+	return names
 }
 
 func (m Model) renderTokenInfo(msg data.Message) string {
@@ -333,6 +396,54 @@ func (m Model) isCollapsed(key string) bool {
 }
 
 // --- Helpers ---
+
+// toolBadge renders a tool name badge with a color specific to the tool type.
+func toolBadge(name string) string {
+	bg, ok := toolBadgeColors[name]
+	if !ok {
+		bg = colorWarm
+	}
+	style := lipgloss.NewStyle().
+		Foreground(colorBg).
+		Background(bg).
+		Bold(true).
+		Padding(0, 1)
+	return style.Render(name)
+}
+
+// formatTimeGap returns a styled time gap indicator if the gap is significant.
+func formatTimeGap(gap time.Duration, w int) string {
+	if gap < 5*time.Minute {
+		return ""
+	}
+
+	var label string
+	switch {
+	case gap < time.Hour:
+		label = fmt.Sprintf("%dm", int(gap.Minutes()))
+	case gap < 24*time.Hour:
+		h := int(gap.Hours())
+		m := int(gap.Minutes()) % 60
+		if m > 0 {
+			label = fmt.Sprintf("%dh %dm", h, m)
+		} else {
+			label = fmt.Sprintf("%dh", h)
+		}
+	default:
+		d := int(gap.Hours() / 24)
+		h := int(gap.Hours()) % 24
+		if h > 0 {
+			label = fmt.Sprintf("%dd %dh", d, h)
+		} else {
+			label = fmt.Sprintf("%dd", d)
+		}
+	}
+
+	if gap < time.Hour {
+		return systemMessageStyle.Width(w).Render("··· " + label + " ···")
+	}
+	return systemMessageStyle.Width(w).Render("── " + label + " ──")
+}
 
 // toolCallSummary returns a brief description of what a tool call does.
 func toolCallSummary(block data.ContentBlock) string {

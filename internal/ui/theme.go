@@ -209,6 +209,17 @@ func rebuildStyles() {
 		Padding(0, 1).
 		MarginRight(1)
 
+	// Per-tool badge colors
+	toolBadgeColors = map[string]lipgloss.Color{
+		"Bash":  colorAccent,    // green
+		"Edit":  colorWarm,      // yellow
+		"Write": colorSecondary, // blue
+		"Read":  colorFgDim,     // dim/cyan
+		"Grep":  colorPrimary,   // purple
+		"Glob":  colorPrimary,   // purple
+		"Agent": colorRed,       // red/pink
+	}
+
 	timestampStyle = lipgloss.NewStyle().
 		Foreground(colorFgDim).
 		Italic(true)

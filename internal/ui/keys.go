@@ -18,6 +18,11 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	// In-conversation search mode
+	if m.convSearchMode {
+		return m.handleConvSearchKey(msg)
+	}
+
 	// Mark input mode (waiting for a-z after m or ')
 	if m.awaitingMark != markNone {
 		return m.handleMarkKey(msg)
@@ -64,6 +69,15 @@ func (m Model) handleActionKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 		m.awaitingMark = markJump
 		m.statusMessage = "Jump to mark: a-z"
 		return m, nil, true
+
+	case "ctrl+f":
+		if m.focus == panelConversation && len(m.messages) > 0 {
+			m.convSearchMode = true
+			m.convSearchInput.Focus()
+			m.convSearchMatches = nil
+			m.convSearchIdx = 0
+			return m, textinput.Blink, true
+		}
 
 	case "/":
 		m.searchMode = true

@@ -131,6 +131,9 @@ func LoadHistory() ([]Project, error) {
 
 		p.Sessions = sessions
 		p.SessionCount = len(sessions)
+		if len(sessions) > 0 {
+			p.LastActive = sessions[0].StartedAt // sessions sorted most recent first
+		}
 		projects = append(projects, p)
 	}
 

@@ -44,6 +44,7 @@ var (
 	assistantLabelStyle  lipgloss.Style
 	assistantBubbleStyle lipgloss.Style
 	toolBadgeStyle       lipgloss.Style
+	toolBadgeColors      map[string]lipgloss.Color
 	timestampStyle       lipgloss.Style
 	tokenStyle           lipgloss.Style
 
