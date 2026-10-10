@@ -2,6 +2,10 @@
 
 A terminal UI for browsing your [Claude Code](https://claude.ai/claude-code) conversation history. Built with Go and the [Charm](https://charm.sh) ecosystem (Bubble Tea, Lip Gloss, Glamour).
 
+![Claude History showing projects, sessions, and a conversation](docs/preview.png)
+
+*The app’s terminal UI, rendered with sample conversations.*
+
 ## Features
 
 - **Three-panel layout** — Projects, Sessions, and Conversation with responsive breakpoints
